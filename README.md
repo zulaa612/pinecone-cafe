@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pine & Pour
 
-## Getting Started
+A responsive café ordering UI built with React 19, Next.js 16, and Tailwind CSS 4, with separate customer and admin sections.
 
-First, run the development server:
+## Run locally
 
-```bash
+```sh
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000. For production, run `npm run build` then `npm start`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Customer section — `/`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Customers can browse and search admin-created products, manage their bag, check out for pickup or delivery, track orders, and leave reviews. The catalog starts empty; products appear after an admin adds them. No sample products, orders, or reviews are created.
 
-## Learn More
+## Admin section — `/admin`
 
-To learn more about Next.js, take a look at the following resources:
+The protected staff interface includes product creation, editing, image uploads, availability controls, deletion, and an order board with Pending, In Preparation, Ready, and Completed statuses. There is no public registration.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+For the local demo, the access code is **pinecone**. To configure staff access, create `.env.local`:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```dotenv
+ADMIN_PASSWORD=your-own-staff-password
+ADMIN_SESSION_SECRET=a-long-random-secret
+```
 
-## Deploy on Vercel
+Staff sessions use signed, eight-hour, HttpOnly cookies with SameSite=Lax and Secure enabled in production. Without a stable session secret, sessions expire when the server restarts.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Data and prototype scope
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Products, orders, reviews, and the cart are saved in this browser's localStorage under `pine-and-pour-v2` and synchronized across tabs. Earlier preview sample records are removed during migration; admin-created records are preserved.
+
+Checkout creates a local demonstration order and takes no payment. Staff authentication protects the dashboard route; browser data is not a protected, shared backend. Add server-side storage, authorization, payment processing, and rate limiting before operating a real ordering service.
+
+Photography and fonts are bundled locally. Source information and font licenses are in `public/images/sources.json` and `public/fonts/`.
+
+## Validation
+
+`npm run build` includes TypeScript validation. Customer and admin interactions were also checked in headless Chrome at desktop and mobile sizes.

@@ -1,0 +1,12 @@
+{
+  "hero.jpg": {
+    "source": "https://unsplash.com/photos/-hx1f4zU_cQ",
+    "photoId": "photo-1541605044787-1efc3fccef3c",
+    "subject": "Overhead coffee and croissant on a dark wood table"
+  },
+  "story.jpg": {
+    "source": "https://images.unsplash.com/photo-1640506780126-1e0836e462cb",
+    "photoId": "photo-1640506780126-1e0836e462cb",
+    "subject": "Warm wooden cafe counter and bookshelves"
+  }
+}

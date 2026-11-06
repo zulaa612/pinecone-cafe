@@ -1,0 +1,23 @@
+{
+  "dm-sans-latin-variable.woff2": {
+    "family": "DM Sans",
+    "style": "normal",
+    "weight": "100 1000",
+    "source": "https://fonts.gstatic.com/s/dmsans/v17/rP2Yp2ywxg089UriI5-g4vlH9VoD8Cmcqbu0-K4.woff2",
+    "license": "DM-Sans-LICENSE.txt"
+  },
+  "dm-serif-display-latin.woff2": {
+    "family": "DM Serif Display",
+    "style": "normal",
+    "weight": "400",
+    "source": "https://fonts.gstatic.com/s/dmserifdisplay/v17/-nFnOHM81r4j6k0gjAW3mujVU2B2G_Bx0g.woff2",
+    "license": "DM-Serif-Display-LICENSE.txt"
+  },
+  "dm-serif-display-latin-italic.woff2": {
+    "family": "DM Serif Display",
+    "style": "italic",
+    "weight": "400",
+    "source": "https://fonts.gstatic.com/s/dmserifdisplay/v17/-nFhOHM81r4j6k0gjAW3mujVU2B2G_VB0PD2.woff2",
+    "license": "DM-Serif-Display-LICENSE.txt"
+  }
+}
