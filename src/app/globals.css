@@ -2,6 +2,7 @@
 @import "./theme.css";
 @import "./theme-keep.css";
 @import "../components/preferences.css";
+@import "../components/customer.css";
 @import "../components/order-dialogs.css";
 @import "../components/admin.css";
 @import "../components/auth.css";

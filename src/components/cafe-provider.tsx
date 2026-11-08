@@ -1,8 +1,9 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { setCustomerType as setCustomerTypeAction } from "@/app/account/actions";
 import * as actions from "@/app/actions/cafe";
-import type { ActionResult, AppUser, CafeState, CartItem, Order, OrderStatus, Product, Review } from "@/lib/cafe";
+import type { ActionResult, AppUser, CafeState, CartItem, CustomerType, Order, OrderStatus, Product, Review } from "@/lib/cafe";
 import { toCents } from "@/lib/cafe";
 import { useI18n } from "@/components/i18n-provider";
 import { computePricing } from "@/lib/pricing";
@@ -16,7 +17,8 @@ type CafeContextValue = {
   cartCount: number; cartTotal: number;
   /** Preview only. The server recomputes every price and discount when the order is placed. */
   pricing: { subtotal: number; discount: number; total: number };
-  addToCart: (id: string) => void;
+  addToCart: (id: string, quantity?: number) => void;
+  setCustomerType: (customerType: CustomerType) => Promise<ActionResult>;
   setCartQuantity: (id: string, quantity: number) => void;
   placeOrder: (details: { customerName: string; classGrade?: string; location?: string }) => Promise<ActionResult<{ id: string }>>;
   addReview: (review: { productId: string; rating: number; comment: string }) => Promise<ActionResult>;
@@ -105,10 +107,10 @@ export function CafeProvider({ sessionKey, children }: { sessionKey: string; chi
   const cartCount = liveCart.reduce((sum, item) => sum + item.quantity, 0);
 
   const setCartQuantity = (id: string, quantity: number) => setCart(prev => quantity <= 0 ? prev.filter(i => i.productId !== id) : prev.map(i => i.productId === id ? { ...i, quantity: Math.min(99, quantity) } : i));
-  const addToCart = (id: string) => setCart(prev => {
+  const addToCart = (id: string, quantity = 1) => setCart(prev => {
     if (!state.products.find(p => p.id === id)?.available) return prev;
     const found = prev.find(i => i.productId === id);
-    return found ? prev.map(i => i.productId === id ? { ...i, quantity: Math.min(99, i.quantity + 1) } : i) : [...prev, { productId: id, quantity: 1 }];
+    return found ? prev.map(i => i.productId === id ? { ...i, quantity: Math.min(99, i.quantity + quantity) } : i) : [...prev, { productId: id, quantity: Math.min(99, quantity) }];
   });
 
   /** Runs a server action, then refreshes server data when it succeeded. */
@@ -129,6 +131,7 @@ export function CafeProvider({ sessionKey, children }: { sessionKey: string; chi
       if (result.ok) setCart([]);
       return result;
     },
+    setCustomerType: customerType => run(() => setCustomerTypeAction({ customerType })),
     addReview: review => run(() => actions.submitReview(review)),
     addProduct: product => run(() => actions.createProduct(product)),
     updateProduct: (id, product) => run(() => actions.updateProduct(id, product)),

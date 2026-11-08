@@ -41,6 +41,8 @@ export default defineMessages(
     "price.total": "Total",
     // ---- server-side messages ----
     "err.generic": "Something went wrong. Please try again.",
+    "err.signIn": "Please sign in first.",
+    "err.customersOnly": "Only customer accounts can choose a role.",
     "err.network": "Something went wrong. Please check your connection and try again.",
     "err.invalid": "Please check the details and try again.",
     "err.adminRequired": "Admin access required.",
@@ -114,6 +116,8 @@ export default defineMessages(
     "price.subtotal": "Дүн",
     "price.total": "Нийт",
     "err.generic": "Алдаа гарлаа. Дахин оролдоно уу.",
+    "err.signIn": "Эхлээд нэвтэрнэ үү.",
+    "err.customersOnly": "Зөвхөн үйлчлүүлэгчийн бүртгэл үүрэг сонгох боломжтой.",
     "err.network": "Алдаа гарлаа. Холболтоо шалгаад дахин оролдоно уу.",
     "err.invalid": "Мэдээллээ шалгаад дахин оролдоно уу.",
     "err.adminRequired": "Админы эрх шаардлагатай.",

@@ -18,7 +18,8 @@ export function CartDrawer({
   const { user, cart, products, setCartQuantity, pricing, cartCount, placeOrder } =
     useCafe();
   const { t } = useI18n();
-  const [step, setStep] = useState<"cart" | "checkout" | "success">("cart");
+  const [step, setStep] = useState<"cart" | "checkout" | "confirm" | "success">("cart");
+  const [details, setDetails] = useState({ customer: "", classGrade: "", location: "" });
   const [placedId, setPlacedId] = useState("");
   const [placing, setPlacing] = useState(false);
   const [formError, setFormError] = useState("");
@@ -32,16 +33,29 @@ export function CartDrawer({
   const isTeacher = user?.customerType === "teacher";
   const canOrder = user?.role === "customer";
 
-  async function submitOrder(event: FormEvent<HTMLFormElement>) {
+  /** Step 2 -> 3: validate the role-specific form, then show the final summary. */
+  function reviewOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!items.length || unavailable || placing) return;
+    if (!items.length || unavailable) return;
     const fields = new FormData(event.currentTarget);
+    setDetails({
+      customer: String(fields.get("customer") || "").trim(),
+      classGrade: String(fields.get("classGrade") || "").trim(),
+      location: String(fields.get("location") || "").trim(),
+    });
+    setFormError("");
+    setStep("confirm");
+  }
+
+  /** Step 3: the only place an order is actually created. The server recomputes all prices. */
+  async function confirmOrder() {
+    if (!items.length || unavailable || placing) return;
     setPlacing(true);
     setFormError("");
     const result = await placeOrder({
-      customerName: String(fields.get("customer") || "").trim(),
-      classGrade: String(fields.get("classGrade") || "").trim() || undefined,
-      location: String(fields.get("location") || "").trim() || undefined,
+      customerName: details.customer,
+      classGrade: details.classGrade || undefined,
+      location: details.location || undefined,
     });
     setPlacing(false);
     if (result.ok) {
@@ -52,12 +66,26 @@ export function CartDrawer({
     }
   }
 
+  const summary = (
+    <div className="ord-order-summary ord-summary-list">
+      <h4>{t("ord.checkout.summary")}</h4>
+      {items.map(({ product, quantity }) => (
+        <div className="ord-total-row" key={product.id}>
+          <span><span className="ord-order-qty">{quantity}×</span> {product.name}</span>
+          <span>{money(product.price * quantity)}</span>
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <Modal
       title={
         step === "checkout"
           ? t("ord.title.checkout")
-          : step === "success"
+          : step === "confirm"
+            ? t("ord.title.confirm")
+            : step === "success"
             ? t("ord.title.success")
             : t("ord.title.cart")
       }
@@ -102,12 +130,12 @@ export function CartDrawer({
       ) : (
         <>
           <div className="ord-cart-intro">
-            {step === "checkout" ? (
+            {step === "checkout" || step === "confirm" ? (
               <button
                 className="ord-text-button"
-                onClick={() => setStep("cart")}
+                onClick={() => { setFormError(""); setStep(step === "confirm" ? "checkout" : "cart"); }}
               >
-                <span aria-hidden="true">←</span> {t("ord.cart.backToBag")}
+                <span aria-hidden="true">←</span> {step === "confirm" ? t("ord.confirm.edit") : t("ord.cart.backToBag")}
               </button>
             ) : (
               <p>
@@ -178,11 +206,25 @@ export function CartDrawer({
                 </article>
               ))}
             </div>
+          ) : step === "confirm" ? (
+            <div className="ord-confirm">
+              <p className="ord-dialog-description">{t("ord.confirm.intro")}</p>
+              {summary}
+              <dl className="ord-confirm-details">
+                <div><dt>{t("ord.checkout.fullName")}</dt><dd>{details.customer}</dd></div>
+                <div><dt>{t("ord.confirm.role")}</dt><dd>{isTeacher ? t("role.teacher") : t("role.student")}</dd></div>
+                {isTeacher ? (
+                  <div><dt>{t("ord.checkout.location")}</dt><dd>{details.location}</dd></div>
+                ) : (
+                  <div><dt>{t("ord.checkout.classGrade")}</dt><dd>{details.classGrade}</dd></div>
+                )}
+              </dl>
+            </div>
           ) : (
             <form
               id="ord-checkout-form"
               className="ord-checkout-form"
-              onSubmit={submitOrder}
+              onSubmit={reviewOrder}
             >
               {!canOrder ? (
                 <div className="ord-signin-prompt">
@@ -209,7 +251,7 @@ export function CartDrawer({
                     <input
                       name="customer"
                       autoComplete="name"
-                      defaultValue={user.name}
+                      defaultValue={details.customer || user.name}
                       maxLength={80}
                       minLength={2}
                       required
@@ -219,16 +261,17 @@ export function CartDrawer({
                   {isTeacher ? (
                     <label className="ord-field">
                       {t("ord.checkout.location")}
-                      <input name="location" placeholder={t("ord.checkout.locationPlaceholder")} maxLength={100} required pattern=".*\S.*" />
+                      <input name="location" defaultValue={details.location} placeholder={t("ord.checkout.locationPlaceholder")} maxLength={100} required pattern=".*\S.*" />
                     </label>
                   ) : (
                     <label className="ord-field">
                       {t("ord.checkout.classGrade")}
-                      <input name="classGrade" placeholder={t("ord.checkout.classPlaceholder")} maxLength={30} required pattern=".*\S.*" />
+                      <input name="classGrade" defaultValue={details.classGrade} placeholder={t("ord.checkout.classPlaceholder")} maxLength={30} required pattern=".*\S.*" />
                     </label>
                   )}
                 </>
               )}
+              {canOrder && summary}
               <div className="ord-payment">
                 <Icon name="credit-card" size={20} />
                 <span>
@@ -272,23 +315,33 @@ export function CartDrawer({
               >
                 {t("ord.cart.continue")} <Icon name="arrow-right" size={18} />
               </button>
-            ) : (
+            ) : step === "checkout" ? (
               <button
                 className="ord-button ord-button-primary"
                 type="submit"
                 form="ord-checkout-form"
+                disabled={unavailable || !canOrder}
+              >
+                {t("ord.checkout.review")} <Icon name="arrow-right" size={18} />
+              </button>
+            ) : (
+              <button
+                className="ord-button ord-button-primary"
+                onClick={confirmOrder}
                 disabled={unavailable || placing || !canOrder}
               >
                 {placing
                   ? t("ord.cart.placing")
-                  : t("ord.cart.place", { total: money(pricing.total) })}{" "}
-                <Icon name="arrow-right" size={18} />
+                  : t("ord.confirm.place", { total: money(pricing.total) })}{" "}
+                <Icon name="check" size={18} />
               </button>
             )}
             <p className="ord-fine-print">
-              {step === "checkout"
-                ? t("ord.cart.fineCheckout")
-                : t("ord.cart.fineCart")}
+              {step === "confirm"
+                ? t("ord.confirm.fine")
+                : step === "checkout"
+                  ? t("ord.cart.fineCheckout")
+                  : t("ord.cart.fineCart")}
             </p>
           </div>
         </>

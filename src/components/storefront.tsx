@@ -130,7 +130,7 @@ export default function Storefront() {
             <div className="user-chip">
               {user ? (
                 <>
-                  <span className="user-name">{user.name}</span>
+                  <Link href="/account" className="user-name">{user.name}</Link>
                   {user.role === "admin" && (
                     <Link href="/admin">{t("common.admin")}</Link>
                   )}
@@ -329,6 +329,7 @@ export default function Storefront() {
                 return (
                   <article className="product-card" key={product.id}>
                     <div className="product-image">
+                      <Link href={`/menu/${product.id}`} className="product-image-link" aria-label={product.name} />
                       <Image
                         src={product.image}
                         alt={product.name}
@@ -361,7 +362,7 @@ export default function Storefront() {
                     </div>
                     <div className="product-info">
                       <div className="product-title-row">
-                        <h3>{product.name}</h3>
+                        <h3><Link href={`/menu/${product.id}`}>{product.name}</Link></h3>
                         <span>{money(product.price)}</span>
                       </div>
                       <p>{product.description}</p>
