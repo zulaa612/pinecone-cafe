@@ -23,13 +23,6 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
   return user ?? null;
 });
 
-/** For server actions and pages that need any signed-in user. */
-export async function requireUser(redirectTo = "/login"): Promise<SessionUser> {
-  const user = await getCurrentUser();
-  if (!user) redirect(redirectTo);
-  return user;
-}
-
 /** Admin-only gate. Signed-out users go to the admin sign-in; non-admins go home. */
 export async function requireAdmin(): Promise<SessionUser> {
   const user = await getCurrentUser();

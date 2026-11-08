@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { logout } from "@/app/auth/actions";
 import { Coffee } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
@@ -59,7 +58,7 @@ export function Stars({ rating = 5 }: { rating?: number }) {
 }
 
 export default function Storefront() {
-  const { user, products, reviews, cart, cartCount, cartTotal, addToCart } =
+  const { products, reviews, cart, cartCount, cartTotal, addToCart } =
     useCafe();
   const { t } = useI18n();
   const [category, setCategory] = useState("All favorites");
@@ -103,16 +102,6 @@ export default function Storefront() {
         <span className="code">
           {t("store.announcement.code")} <Coffee />
         </span>
-        <nav className="section-switcher" aria-label={t("store.section.label")}>
-          <Link href="/" aria-current="page">
-            <Icon name="user" size={20} />
-            {t("store.section.customer")}
-          </Link>
-          <Link href="/admin">
-            <Icon name="shield" size={20} />
-            {t("store.section.admin")}
-          </Link>
-        </nav>
       </div>
       <header className="site-header">
         <div className="container header-inner">
@@ -123,25 +112,11 @@ export default function Storefront() {
             </a>
 
             <a href="#reviews">{t("store.nav.leaveReview")}</a>
+            <Link href="/admin">{t("common.admin")}</Link>
           </nav>
           <div className="header-actions">
             <LanguageSwitcher />
             <ThemeToggle />
-            <div className="user-chip">
-              {user ? (
-                <>
-                  <Link href="/account" className="user-name">{user.name}</Link>
-                  {user.role === "admin" && (
-                    <Link href="/admin">{t("common.admin")}</Link>
-                  )}
-                  <form action={logout}>
-                    <button type="submit">{t("common.signOut")}</button>
-                  </form>
-                </>
-              ) : (
-                <Link href="/login">{t("common.signIn")}</Link>
-              )}
-            </div>
             <button className="track-button" onClick={() => setDialog("track")}>
               <Icon name="receipt" size={17} />
               <span>{t("store.nav.track")}</span>
@@ -175,6 +150,9 @@ export default function Storefront() {
             <a href="#reviews" onClick={() => setMobileMenu(false)}>
               {t("store.nav.reviews")}
             </a>
+            <Link href="/admin" onClick={() => setMobileMenu(false)}>
+              {t("common.admin")}
+            </Link>
             <button
               onClick={() => {
                 setMobileMenu(false);
@@ -524,6 +502,9 @@ export default function Storefront() {
               </strong>
               <strong>
                 <a href="#reviews">{t("store.footer.reviews")}</a>
+              </strong>
+              <strong>
+                <Link href="/admin">{t("common.admin")}</Link>
               </strong>
             </div>
             <div className="footer-links">

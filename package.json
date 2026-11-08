@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "db:push": "drizzle-kit push",
+    "db:migrate:guest": "node --env-file-if-exists=.env.local --import tsx scripts/migrate-guest-checkout.mts",
+    "test:guest": "node --import tsx scripts/test-guest-checkout.mts",
     "db:seed": "node --env-file=.env.local --import tsx scripts/seed.mts"
   },
   "dependencies": {

@@ -1,13 +1,14 @@
-/* Product detail and account pages (components/product-detail.tsx, account-page.tsx, page-shell.tsx). */
+/* Product detail pages (components/product-detail.tsx, page-shell.tsx). */
 .page-shell .page-main { padding-block: 32px 80px; min-height: 70vh; }
 .page-title { font-family: var(--serif); font-weight: 400; font-size: clamp(30px, 4vw, 44px); line-height: 1.1; margin: 8px 0 24px; }
 .page-note { color: var(--muted); font-size: 14px; line-height: 1.6; margin: 8px 0; }
 .page-success { color: var(--c-3f6a3a); font-size: 14px; margin: 6px 0; min-height: 1em; }
+.page-error { color: var(--c-a3412d); font-size: 14px; margin: 6px 0; }
 .page-back { display: inline-block; margin-bottom: 20px; font-size: 13px; color: var(--muted); text-decoration: none; }
 .page-back:hover { color: var(--gold); }
 .page-card { background: var(--paper); border: 1px solid var(--line); border-radius: 18px; padding: 22px; }
 .page-card h2, .page-card h3 { margin: 0 0 12px; font-family: var(--serif); font-weight: 400; }
-.page-card a, .page-note a, .page-shell .user-name { color: var(--gold); font-weight: 600; text-decoration: none; }
+.page-card a, .page-note a { color: var(--gold); font-weight: 600; text-decoration: none; }
 .page-button {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   font: inherit; font-weight: 700; font-size: 14px; padding: 13px 22px; border: 0; border-radius: 999px;
@@ -35,28 +36,16 @@
 .detail-review-form { display: grid; gap: 14px; }
 .detail-review-form textarea { font: inherit; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--c-ffffff); color: inherit; resize: vertical; }
 
-.account-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
-.account-facts { margin: 0 0 18px; display: grid; gap: 8px; }
-.account-facts > div { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
-.account-facts dt { color: var(--muted); }
-.account-facts dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; text-align: right; }
-.account-role { display: grid; gap: 12px; }
-.account-orders { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.account-orders li { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
-.account-orders li:last-child { border-bottom: 0; }
-.account-orders small { display: block; color: var(--muted); }
-
 .product-image-link { position: absolute; inset: 0; z-index: 1; }
 .product-title-row h3 a { color: inherit; text-decoration: none; }
 .product-title-row h3 a:hover { color: var(--gold); }
 
 @media (max-width: 860px) {
-  .detail, .detail-reviews-grid, .account-grid { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .detail, .detail-reviews-grid { grid-template-columns: minmax(0, 1fr); gap: 28px; }
   .page-shell .header-actions > .pref-lang, .page-shell .header-actions > .theme-toggle { display: inline-flex; }
 }
 @media (max-width: 520px) {
   .page-shell .header-actions { gap: 6px; }
-  .page-shell .user-chip .user-name { display: none; }
   .page-shell .pref-lang button { padding: 6px 7px; }
 }
 @media (max-width: 520px) { .page-shell .brand-wordmark { display: none; } .page-shell .header-inner { gap: 8px; } }

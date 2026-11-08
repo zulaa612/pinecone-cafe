@@ -9,7 +9,7 @@ export type Product = {
 };
 export type OrderItem = { productId: string | null; name: string; unitPrice: number; quantity: number };
 export type Order = {
-  id: string; customerName: string; customerEmail: string; customerType: CustomerType;
+  id: string; customerName: string; customerEmail: string | null; customerType: CustomerType;
   classGrade: string | null; location: string | null; status: OrderStatus;
   subtotal: number; discount: number; total: number; createdAt: string; items: OrderItem[];
 };

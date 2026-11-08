@@ -1,12 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { useCafe } from "@/components/cafe-provider";
 import { Icon } from "@/components/icon";
 import { useI18n } from "@/components/i18n-provider";
 import { Modal } from "@/components/modal";
-import { money } from "@/lib/cafe";
+import { money, toCents, type CustomerType } from "@/lib/cafe";
+import { computePricing } from "@/lib/pricing";
 
 export function CartDrawer({
   onClose,
@@ -15,12 +15,17 @@ export function CartDrawer({
   onClose: () => void;
   onTrack: (id: string) => void;
 }) {
-  const { user, cart, products, setCartQuantity, pricing, cartCount, placeOrder } =
+  const { cart, products, setCartQuantity, cartCount, placeOrder } =
     useCafe();
   const { t } = useI18n();
   const [step, setStep] = useState<"cart" | "checkout" | "confirm" | "success">("cart");
-  const [details, setDetails] = useState({ customer: "", classGrade: "", location: "" });
+  const [details, setDetails] = useState<{
+    customer: string;
+    classGrade: string;
+    customerType: CustomerType;
+  }>({ customer: "", classGrade: "", customerType: "student" });
   const [placedId, setPlacedId] = useState("");
+  const [placedTotal, setPlacedTotal] = useState<number | null>(null);
   const [placing, setPlacing] = useState(false);
   const [formError, setFormError] = useState("");
   const items = cart.flatMap((item) => {
@@ -30,19 +35,27 @@ export function CartDrawer({
     return product ? [{ product, quantity: item.quantity }] : [];
   });
   const unavailable = items.some(({ product }) => !product.available);
-  const isTeacher = user?.customerType === "teacher";
-  const canOrder = user?.role === "customer";
+  const subtotalCents = items.reduce(
+    (total, { product, quantity }) => total + toCents(product.price) * quantity,
+    0,
+  );
+  const pricing = computePricing(
+    subtotalCents,
+    step === "cart" ? "student" : details.customerType,
+  );
+  const total = pricing.totalCents / 100;
 
-  /** Step 2 -> 3: validate the role-specific form, then show the final summary. */
+  /** Details belong to this checkout and survive returning from confirmation. */
   function reviewOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!items.length || unavailable) return;
-    const fields = new FormData(event.currentTarget);
-    setDetails({
-      customer: String(fields.get("customer") || "").trim(),
-      classGrade: String(fields.get("classGrade") || "").trim(),
-      location: String(fields.get("location") || "").trim(),
-    });
+    const customer = details.customer.trim();
+    const classGrade = details.classGrade.trim();
+    setDetails((current) => ({ ...current, customer, classGrade }));
+    if (customer.length < 2 || !classGrade) {
+      setFormError(t("ord.checkout.requiredDetails"));
+      return;
+    }
     setFormError("");
     setStep("confirm");
   }
@@ -54,12 +67,13 @@ export function CartDrawer({
     setFormError("");
     const result = await placeOrder({
       customerName: details.customer,
-      classGrade: details.classGrade || undefined,
-      location: details.location || undefined,
+      classGrade: details.classGrade,
+      customerType: details.customerType,
     });
     setPlacing(false);
     if (result.ok) {
       setPlacedId(result.id);
+      setPlacedTotal(result.totalCents / 100);
       setStep("success");
     } else {
       setFormError(result.error);
@@ -102,6 +116,12 @@ export function CartDrawer({
           <p>
             {t("ord.success.orderPre")} <strong>{placedId}</strong> {t("ord.success.orderPost")}
           </p>
+          {placedTotal !== null && (
+            <div className="ord-total-row ord-grand-total">
+              <span>{t("price.total")}</span>
+              <strong>{money(placedTotal)}</strong>
+            </div>
+          )}
           <div className="ord-demo-note">
             <Icon name="info" size={17} />
             <span>{t("ord.success.note")}</span>
@@ -212,12 +232,8 @@ export function CartDrawer({
               {summary}
               <dl className="ord-confirm-details">
                 <div><dt>{t("ord.checkout.fullName")}</dt><dd>{details.customer}</dd></div>
-                <div><dt>{t("ord.confirm.role")}</dt><dd>{isTeacher ? t("role.teacher") : t("role.student")}</dd></div>
-                {isTeacher ? (
-                  <div><dt>{t("ord.checkout.location")}</dt><dd>{details.location}</dd></div>
-                ) : (
-                  <div><dt>{t("ord.checkout.classGrade")}</dt><dd>{details.classGrade}</dd></div>
-                )}
+                <div><dt>{t("ord.checkout.userRole")}</dt><dd>{details.customerType === "teacher" ? t("role.teacher") : t("role.student")}</dd></div>
+                <div><dt>{t("ord.checkout.classGrade")}</dt><dd>{details.classGrade}</dd></div>
               </dl>
             </div>
           ) : (
@@ -226,52 +242,51 @@ export function CartDrawer({
               className="ord-checkout-form"
               onSubmit={reviewOrder}
             >
-              {!canOrder ? (
-                <div className="ord-signin-prompt">
-                  <h3>{t("ord.checkout.signInTitle")}</h3>
-                  <p>
-                    {user
-                      ? t("ord.checkout.staff")
-                      : t("ord.checkout.signInHint")}
-                  </p>
-                  {!user && (
-                    <p>
-                      <Link href="/login">{t("ord.checkout.signIn")}</Link> · <Link href="/register">{t("ord.checkout.register")}</Link>
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <>
-                  <div className="ord-form-heading">
-                    <h3>{t("ord.checkout.yourDetails")}</h3>
-                    <p>{isTeacher ? t("ord.checkout.teacherDiscount") : t("ord.checkout.student")}</p>
-                  </div>
-                  <label className="ord-field">
-                    {t("ord.checkout.fullName")}
+              <div className="ord-form-heading">
+                <h3>{t("ord.checkout.yourDetails")}</h3>
+              </div>
+              <label className="ord-field">
+                {t("ord.checkout.fullName")}
+                <input
+                  name="customer"
+                  autoComplete="name"
+                  value={details.customer}
+                  onChange={(event) => setDetails((current) => ({ ...current, customer: event.target.value }))}
+                  maxLength={80}
+                  minLength={2}
+                  required
+                  pattern=".*\S.*"
+                />
+              </label>
+              <label className="ord-field">
+                {t("ord.checkout.classGrade")}
+                <input
+                  name="classGrade"
+                  value={details.classGrade}
+                  onChange={(event) => setDetails((current) => ({ ...current, classGrade: event.target.value }))}
+                  placeholder={t("ord.checkout.classPlaceholder")}
+                  maxLength={30}
+                  required
+                  pattern=".*\S.*"
+                />
+              </label>
+              <fieldset className="ord-user-role">
+                <legend>{t("ord.checkout.userRole")}</legend>
+                {(["student", "teacher"] as const).map((customerType) => (
+                  <label key={customerType} className={details.customerType === customerType ? "ord-selected" : ""}>
                     <input
-                      name="customer"
-                      autoComplete="name"
-                      defaultValue={details.customer || user.name}
-                      maxLength={80}
-                      minLength={2}
+                      type="radio"
+                      name="customerType"
+                      value={customerType}
+                      checked={details.customerType === customerType}
+                      onChange={() => setDetails((current) => ({ ...current, customerType }))}
                       required
-                      pattern=".*\S.*"
                     />
+                    <span>{t(customerType === "teacher" ? "role.teacher" : "role.student")}</span>
                   </label>
-                  {isTeacher ? (
-                    <label className="ord-field">
-                      {t("ord.checkout.location")}
-                      <input name="location" defaultValue={details.location} placeholder={t("ord.checkout.locationPlaceholder")} maxLength={100} required pattern=".*\S.*" />
-                    </label>
-                  ) : (
-                    <label className="ord-field">
-                      {t("ord.checkout.classGrade")}
-                      <input name="classGrade" defaultValue={details.classGrade} placeholder={t("ord.checkout.classPlaceholder")} maxLength={30} required pattern=".*\S.*" />
-                    </label>
-                  )}
-                </>
-              )}
-              {canOrder && summary}
+                ))}
+              </fieldset>
+              {summary}
               <div className="ord-payment">
                 <Icon name="credit-card" size={20} />
                 <span>
@@ -283,19 +298,9 @@ export function CartDrawer({
             </form>
           )}
           <div className="ord-cart-bottom">
-            <div className="ord-total-row">
-              <span>{isTeacher ? t("price.original") : t("price.subtotal")}</span>
-              <span>{money(pricing.subtotal)}</span>
-            </div>
-            {isTeacher && (
-              <div className="ord-total-row">
-                <span>{t("price.discount")}</span>
-                <span>−{money(pricing.discount)}</span>
-              </div>
-            )}
-            <div className="ord-total-row ord-grand-total">
-              <span>{isTeacher ? t("price.final") : t("price.total")}</span>
-              <strong>{money(pricing.total)}</strong>
+            <div className="ord-total-row ord-grand-total" aria-live="polite" aria-atomic="true">
+              <span>{t("price.total")}</span>
+              <strong>{money(total)}</strong>
             </div>
             {unavailable && (
               <p className="ord-error" role="alert">
@@ -320,7 +325,7 @@ export function CartDrawer({
                 className="ord-button ord-button-primary"
                 type="submit"
                 form="ord-checkout-form"
-                disabled={unavailable || !canOrder}
+                disabled={unavailable}
               >
                 {t("ord.checkout.review")} <Icon name="arrow-right" size={18} />
               </button>
@@ -328,11 +333,11 @@ export function CartDrawer({
               <button
                 className="ord-button ord-button-primary"
                 onClick={confirmOrder}
-                disabled={unavailable || placing || !canOrder}
+                disabled={unavailable || placing}
               >
                 {placing
                   ? t("ord.cart.placing")
-                  : t("ord.confirm.place", { total: money(pricing.total) })}{" "}
+                  : t("ord.confirm.place", { total: money(total) })}{" "}
                 <Icon name="check" size={18} />
               </button>
             )}
@@ -380,7 +385,7 @@ export function OrderTracker({
   orderId?: string;
   onClose: () => void;
 }) {
-  const { user, orders } = useCafe();
+  const { orders } = useCafe();
   const { t, locale } = useI18n();
   const [query, setQuery] = useState(orderId || "");
   const [lookup, setLookup] = useState(orderId || "");
@@ -423,7 +428,7 @@ export function OrderTracker({
         </button>
       </form>
       <p id="ord-lookup-help" className="ord-lookup-help">
-        {user ? t("ord.track.helpUser") : t("ord.track.helpGuest")}
+        {t("ord.track.help")}
       </p>
       <div aria-live="polite">
         {lookup && !order && (
@@ -497,20 +502,8 @@ export function OrderTracker({
                   <span>{money(item.unitPrice * item.quantity)}</span>
                 </div>
               ))}
-              {order.discount > 0 && (
-                <>
-                  <div className="ord-total-row">
-                    <span>{t("price.original")}</span>
-                    <span>{money(order.subtotal)}</span>
-                  </div>
-                  <div className="ord-total-row">
-                    <span>{t("price.discount")}</span>
-                    <span>−{money(order.discount)}</span>
-                  </div>
-                </>
-              )}
               <div className="ord-total-row ord-grand-total">
-                <span>{order.discount > 0 ? t("price.final") : t("price.total")}</span>
+                <span>{t("price.total")}</span>
                 <strong>{money(order.total)}</strong>
               </div>
             </div>
@@ -531,7 +524,7 @@ export function OrderTracker({
 }
 
 export function ReviewDialog({ onClose }: { onClose: () => void }) {
-  const { user, products, addReview } = useCafe();
+  const { products, addReview } = useCafe();
   const { t } = useI18n();
   const [rating, setRating] = useState(5);
   const [error, setError] = useState("");
@@ -569,14 +562,7 @@ export function ReviewDialog({ onClose }: { onClose: () => void }) {
       onClose={onClose}
       className="ord-review"
     >
-      {!user ? (
-        <div className="ord-signin-prompt">
-          <h3>{t("ord.review.signIn")}</h3>
-          <p>
-            <Link href="/login">{t("ord.review.signInLink")}</Link> · <Link href="/register">{t("ord.review.registerLink")}</Link>
-          </p>
-        </div>
-      ) : submitted ? (
+      {submitted ? (
         <div className="ord-success">
           <span className="ord-success-icon">
             <Icon name="heart" size={29} />

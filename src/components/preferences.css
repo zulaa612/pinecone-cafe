@@ -20,8 +20,6 @@
 .pref-lang button:hover { color: var(--espresso); }
 .pref-lang button.pref-lang-active { background: var(--espresso); color: var(--cream); }
 
-.auth-prefs { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 14px; }
-
 /* Smooth theme change: html gets .theme-anim only while toggling, never on first load. */
 html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after {
   transition: background-color .3s ease, color .3s ease, border-color .3s ease, fill .3s ease, stroke .3s ease, box-shadow .3s ease !important;
@@ -38,7 +36,7 @@ html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after {
 .storefront .header-actions { gap: 10px; }
 @media (max-width: 1150px) { .storefront .track-button span { display: none; } }
 @media (max-width: 700px) { .storefront .header-actions > .pref-lang, .storefront .header-actions > .theme-toggle { display: none; } }
-.user-chip a, .user-chip button, .storefront .track-button, .storefront .cart-button { white-space: nowrap; }
+.storefront .track-button, .storefront .cart-button { white-space: nowrap; }
 
 /* Checkout review step */
 .ord-summary-list { margin: 4px 0 14px; }

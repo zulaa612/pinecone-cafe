@@ -28,9 +28,6 @@
 .storefront .announcement { height: 40px; padding-inline: max(48px, calc((100vw - 1240px) / 2)); font-size: 12px; letter-spacing: .2px; }
 .storefront .code { gap: 9px; }
 .storefront .code > svg { width: 16px; height: 16px; }
-.storefront .section-switcher { font-size: 11px; gap: 16px; }
-.storefront .section-switcher svg { width: 14px; height: 14px; }
-.storefront .section-switcher a + a { padding-left: 16px; }
 .storefront .site-header { background: var(--c-f8f5eef2); }
 .storefront .header-inner { height: 88px; gap: 24px; }
 .storefront .brand-name { font-size: 27px; letter-spacing: -.7px; }
@@ -156,10 +153,6 @@
   .storefront .container { width: calc(100% - 40px); }
   .storefront .announcement { height: 36px; padding-inline: 20px; gap: 10px; font-size: 10px; }
   .storefront .announcement > span:first-child { max-width: none; }
-  .storefront .section-switcher { font-size: 10px; gap: 10px; }
-  .storefront .section-switcher a + a { padding-left: 10px; }
-  .storefront .section-switcher a:first-child { display: none; }
-  .storefront .section-switcher a + a { border-left: 0; padding-left: 0; }
   .storefront .header-inner { height: 78px; gap: 10px; }
   .storefront .brand { gap: 8px; }
   .storefront .brand-symbol { width: 36px; height: 36px; }

@@ -42,21 +42,27 @@ export const products = sqliteTable("products", {
 export const reviews = sqliteTable("reviews", {
   id: id(),
   productId: text("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
-  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  /** Retained for existing account reviews; guest reviews use the checkout browser key. */
+  userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+  guestTokenHash: text("guest_token_hash"),
+  customerName: text("customer_name"),
   rating: integer("rating").notNull(),
   comment: text("comment").notNull().default(""),
   createdAt: createdAt(),
-}, t => [index("reviews_product_idx").on(t.productId)]);
+}, t => [index("reviews_product_idx").on(t.productId), uniqueIndex("reviews_guest_product_idx").on(t.guestTokenHash, t.productId)]);
 
 export const orders = sqliteTable("orders", {
   id: text("id").primaryKey(),
-  userId: text("user_id").notNull().references(() => users.id),
+  /** Nullable for guest orders; existing account associations remain intact. */
+  userId: text("user_id").references(() => users.id),
+  /** Only a SHA-256 hash is stored, never the browser's opaque ownership token. */
+  guestTokenHash: text("guest_token_hash"),
   customerName: text("customer_name").notNull(),
   /** Snapshot of the customer's type at order time; drives pricing. */
   customerType: text("customer_type", { enum: CUSTOMER_TYPES }).notNull(),
-  /** Student: class/grade. */
+  /** Class/grade collected from both students and teachers at checkout. */
   classGrade: text("class_grade"),
-  /** Teacher: current location / delivery spot. */
+  /** Legacy delivery detail retained for historical orders. */
   location: text("location"),
   status: text("status", { enum: ORDER_STATUSES }).notNull().default("pending"),
   subtotalCents: integer("subtotal_cents").notNull(),
@@ -64,7 +70,7 @@ export const orders = sqliteTable("orders", {
   totalCents: integer("total_cents").notNull(),
   createdAt: createdAt(),
   completedAt: text("completed_at"),
-}, t => [index("orders_status_completed_idx").on(t.status, t.completedAt), index("orders_user_idx").on(t.userId)]);
+}, t => [index("orders_status_completed_idx").on(t.status, t.completedAt), index("orders_user_idx").on(t.userId), index("orders_guest_idx").on(t.guestTokenHash)]);
 
 export const orderItems = sqliteTable("order_items", {
   id: id(),

@@ -1,10 +1,11 @@
 import "server-only";
 
-import { desc, eq, sql } from "drizzle-orm";
+import { desc, eq, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { orders, products, reviews, users } from "@/db/schema";
 import type { SessionUser } from "@/lib/auth/dal";
 import type { CafeState, Order, Product, Review } from "@/lib/cafe";
+import { readGuestTokenHash } from "@/lib/guest";
 
 const dollars = (cents: number) => cents / 100;
 
@@ -26,26 +27,31 @@ export async function getProducts(): Promise<Product[]> {
 
 export async function getReviews(): Promise<Review[]> {
   const rows = await db
-    .select({ id: reviews.id, productId: reviews.productId, productName: products.name, name: users.name, rating: reviews.rating, comment: reviews.comment, date: reviews.createdAt })
+    .select({ id: reviews.id, productId: reviews.productId, productName: products.name, name: sql<string>`coalesce(${reviews.customerName}, ${users.name}, 'Guest')`, rating: reviews.rating, comment: reviews.comment, date: reviews.createdAt })
     .from(reviews)
     .innerJoin(products, eq(products.id, reviews.productId))
-    .innerJoin(users, eq(users.id, reviews.userId))
+    .leftJoin(users, eq(users.id, reviews.userId))
     .orderBy(desc(reviews.createdAt))
     .limit(200);
   return rows;
 }
 
-/** Admins see every order; customers only ever see their own. */
+/** Admins see all orders; other callers see only their checkout browser and legacy account orders. */
 export async function getOrders(user: SessionUser | null): Promise<Order[]> {
-  if (!user) return [];
+  const guestTokenHash = await readGuestTokenHash();
+  const ownership = or(
+    guestTokenHash ? eq(orders.guestTokenHash, guestTokenHash) : undefined,
+    user?.role === "customer" ? eq(orders.userId, user.id) : undefined,
+  );
+  if (user?.role !== "admin" && !ownership) return [];
   const rows = await db.query.orders.findMany({
-    where: user.role === "admin" ? undefined : eq(orders.userId, user.id),
+    where: user?.role === "admin" ? undefined : ownership,
     with: { items: true, user: { columns: { email: true } } },
     orderBy: desc(orders.createdAt),
     limit: 500,
   });
   return rows.map(o => ({
-    id: o.id, customerName: o.customerName, customerEmail: o.user.email, customerType: o.customerType,
+    id: o.id, customerName: o.customerName, customerEmail: o.user?.email ?? null, customerType: o.customerType,
     classGrade: o.classGrade, location: o.location, status: o.status,
     subtotal: dollars(o.subtotalCents), discount: dollars(o.discountCents), total: dollars(o.totalCents), createdAt: o.createdAt,
     items: o.items.map(i => ({ productId: i.productId, name: i.name, unitPrice: dollars(i.unitPriceCents), quantity: i.quantity })),

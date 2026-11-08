@@ -8,14 +8,12 @@ import { Icon } from "@/components/icon";
 import { PageShell } from "@/components/page-shell";
 import { Stars } from "@/components/storefront";
 import { money } from "@/lib/cafe";
-import { computePricing } from "@/lib/pricing";
-import { toCents } from "@/lib/cafe";
 
 const countKey = (count: number, one: "cust.reviews.count_one" | "cust.review.stars_one") =>
   (count === 1 ? one : one.replace("_one", "_other")) as "cust.reviews.count_other" | "cust.review.stars_other";
 
 export function ProductDetail({ id }: { id: string }) {
-  const { user, products, reviews, status, refresh, addToCart, addReview } = useCafe();
+  const { products, reviews, status, refresh, addToCart, addReview } = useCafe();
   const { t, locale } = useI18n();
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
@@ -63,10 +61,6 @@ export function ProductDetail({ id }: { id: string }) {
     );
   }
 
-  const teacherPrice = user?.customerType === "teacher" && user.role === "customer"
-    ? computePricing(toCents(product.price), "teacher").totalCents / 100
-    : null;
-
   return (
     <PageShell>
       <Link href="/#menu" className="page-back">← {t("cust.back")}</Link>
@@ -88,7 +82,6 @@ export function ProductDetail({ id }: { id: string }) {
             </span>
           </div>
           <p className="detail-price">{money(product.price)}</p>
-          {teacherPrice !== null && <p className="page-success">{t("cust.teacherPrice", { price: money(teacherPrice) })}</p>}
           <p className="detail-description">{product.description}</p>
           {product.available ? (
             <div className="detail-buy">
@@ -131,10 +124,8 @@ export function ProductDetail({ id }: { id: string }) {
           </div>
           <div className="page-card">
             <h3>{t("cust.review.write")}</h3>
-            {!user ? (
-              <p><Link href="/login">{t("cust.review.signIn")}</Link></p>
-            ) : (
-              <form onSubmit={submitReview} className="detail-review-form">
+            <p className="page-note">{t("cust.review.orderHint")}</p>
+            <form onSubmit={submitReview} className="detail-review-form">
                 <fieldset className="ord-rating">
                   <legend>{t("cust.review.rating")}</legend>
                   <div onMouseLeave={() => setHovered(0)}>
@@ -151,10 +142,9 @@ export function ProductDetail({ id }: { id: string }) {
                   <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder={t("cust.review.placeholder")} rows={4} required minLength={5} maxLength={1000} />
                 </label>
                 <p className="page-note">{t("cust.review.again")}</p>
-                {feedback && <p className={feedback.ok ? "page-success" : "auth-error"} role={feedback.ok ? "status" : "alert"}>{feedback.text}</p>}
+                {feedback && <p className={feedback.ok ? "page-success" : "page-error"} role={feedback.ok ? "status" : "alert"}>{feedback.text}</p>}
                 <button className="page-button" type="submit" disabled={saving}>{saving ? t("cust.review.saving") : t("cust.review.submit")}</button>
-              </form>
-            )}
+            </form>
           </div>
         </div>
       </section>

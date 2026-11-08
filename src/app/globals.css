@@ -5,7 +5,6 @@
 @import "../components/customer.css";
 @import "../components/order-dialogs.css";
 @import "../components/admin.css";
-@import "../components/auth.css";
 /* Self-hosted Latin fonts from Google Fonts. See adjacent license files. */
 @font-face {
   font-family: "DM Sans";
@@ -2460,28 +2459,6 @@ h2 em {
   gap: 10px;
   align-items: center;
 }
-.section-switcher {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  font-size: 15px;
-}
-.section-switcher a {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--c-d9c7ab);
-}
-.section-switcher a[aria-current] {
-  color: var(--c-fff7e9);
-}
-.section-switcher a:hover {
-  color: var(--c-ffffff);
-}
-.section-switcher a + a {
-  border-left: 1px solid var(--c-ffffff35);
-  padding-left: 18px;
-}
 .hero-community {
   display: flex;
   align-items: center;
@@ -2580,20 +2557,6 @@ h2 em {
   .announcement > span:first-child {
     max-width: 160px;
     line-height: 1.5;
-  }
-  .section-switcher {
-    font-size: 9px;
-    gap: 10px;
-    flex-shrink: 0;
-  }
-  .section-switcher a {
-    gap: 4px;
-  }
-  .section-switcher a + a {
-    padding-left: 10px;
-  }
-  .section-switcher a > svg:last-child:not(:first-child) {
-    display: none;
   }
   .hero-community {
     font-size: 10px;

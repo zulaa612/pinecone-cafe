@@ -1,7 +1,7 @@
 "use server";
 
 import { randomInt } from "node:crypto";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { orderItems, orders, products, reviews } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth/dal";
@@ -9,6 +9,7 @@ import type { ActionResult } from "@/lib/cafe";
 import { getT, issueMessage } from "@/lib/i18n-server";
 import { toCents } from "@/lib/cafe";
 import { computePricing } from "@/lib/pricing";
+import { persistGuestIdentity, prepareGuestIdentity, readGuestTokenHash } from "@/lib/guest";
 import { removeUpload, resolveImage } from "@/lib/uploads";
 import { orderSchema, orderStatusSchema, productSchema, reviewSchema } from "@/lib/validation";
 
@@ -60,16 +61,9 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
 
 export async function placeOrder(input: unknown): Promise<ActionResult<{ id: string; totalCents: number }>> {
   const t = await getT();
-  const user = await getCurrentUser();
-  if (!user) return { ok: false, error: t("err.signInToOrder") };
-  if (user.role !== "customer") return { ok: false, error: t("err.staffNoOrder") };
   const parsed = orderSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: issueMessage(await getT(), parsed.error.issues[0]) };
-  const { customerName, classGrade, location } = parsed.data;
-
-  // Role decides which details are required. The role comes from the database, not the client.
-  if (user.customerType === "student" && !classGrade) return { ok: false, error: t("err.classRequired") };
-  if (user.customerType === "teacher" && !location) return { ok: false, error: t("err.locationRequired") };
+  const { customerName, classGrade, customerType } = parsed.data;
 
   // Merge duplicate lines, then price everything from the database.
   const quantities = new Map<string, number>();
@@ -80,24 +74,27 @@ export async function placeOrder(input: unknown): Promise<ActionResult<{ id: str
   if (unavailable) return { ok: false, error: t("err.unavailable", { name: unavailable.name }) };
 
   const subtotalCents = found.reduce((sum, p) => sum + p.priceCents * (quantities.get(p.id) ?? 0), 0);
-  const pricing = computePricing(subtotalCents, user.customerType);
+  // The selected checkout role controls pricing; submitted totals are never trusted.
+  const pricing = computePricing(subtotalCents, customerType);
+  const guest = await prepareGuestIdentity();
 
   for (let attempt = 0; attempt < 5; attempt++) {
     const id = `PP-${randomInt(100000, 1000000)}`;
     try {
       await db.transaction(async tx => {
         await tx.insert(orders).values({
-          id, userId: user.id, customerName, customerType: user.customerType,
-          classGrade: user.customerType === "student" ? classGrade : null,
-          location: user.customerType === "teacher" ? location : null,
+          id, guestTokenHash: guest.hash, customerName, customerType, classGrade,
           subtotalCents: pricing.subtotalCents, discountCents: pricing.discountCents, totalCents: pricing.totalCents,
         });
         await tx.insert(orderItems).values(found.map(p => ({ orderId: id, productId: p.id, name: p.name, unitPriceCents: p.priceCents, quantity: quantities.get(p.id) ?? 0 })));
       });
-      return { ok: true, id, totalCents: pricing.totalCents };
     } catch (error) {
       if (!String(error).includes("UNIQUE")) return { ok: false, error: t("err.orderFailed") };
+      continue;
     }
+    // Browsing and invalid checkouts do not create a browser identity.
+    await persistGuestIdentity(guest.token);
+    return { ok: true, id, totalCents: pricing.totalCents };
   }
   return { ok: false, error: t("err.orderFailed") };
 }
@@ -115,17 +112,25 @@ export async function updateOrderStatus(input: unknown): Promise<ActionResult> {
 // ---------- Reviews ----------
 
 export async function submitReview(input: unknown): Promise<ActionResult> {
-  const user = await getCurrentUser();
-  if (!user) return { ok: false, error: (await getT())("err.signInToReview") };
   const parsed = reviewSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: issueMessage(await getT(), parsed.error.issues[0]) };
   const { productId, rating, comment } = parsed.data;
   const [product] = await db.select({ id: products.id }).from(products).where(eq(products.id, productId));
   if (!product) return { ok: false, error: (await getT())("err.productGone") };
-  // One review per customer per product: submitting again updates it, which keeps averages honest.
-  const [existing] = await db.select({ id: reviews.id }).from(reviews).where(and(eq(reviews.productId, productId), eq(reviews.userId, user.id)));
-  if (existing) await db.update(reviews).set({ rating, comment, createdAt: new Date().toISOString() }).where(eq(reviews.id, existing.id));
-  else await db.insert(reviews).values({ productId, userId: user.id, rating, comment });
+  const guestTokenHash = await readGuestTokenHash();
+  if (!guestTokenHash) return { ok: false, error: (await getT())("err.orderToReview") };
+  // Identity comes exclusively from a purchased item's checkout, never a review form.
+  const [purchase] = await db.select({ customerName: orders.customerName }).from(orders)
+    .innerJoin(orderItems, eq(orderItems.orderId, orders.id))
+    .where(and(eq(orders.guestTokenHash, guestTokenHash), eq(orderItems.productId, productId), ne(orders.status, "cancelled")))
+    .orderBy(desc(orders.createdAt)).limit(1);
+  if (!purchase) return { ok: false, error: (await getT())("err.orderToReview") };
+  // The unique browser/product key also makes concurrent submissions update one review.
+  await db.insert(reviews).values({ productId, guestTokenHash, customerName: purchase.customerName, rating, comment })
+    .onConflictDoUpdate({
+      target: [reviews.guestTokenHash, reviews.productId],
+      set: { rating, comment, customerName: purchase.customerName, createdAt: new Date().toISOString() },
+    });
   return { ok: true };
 }
 

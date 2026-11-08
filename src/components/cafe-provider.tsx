@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { setCustomerType as setCustomerTypeAction } from "@/app/account/actions";
 import * as actions from "@/app/actions/cafe";
 import type { ActionResult, AppUser, CafeState, CartItem, CustomerType, Order, OrderStatus, Product, Review } from "@/lib/cafe";
 import { toCents } from "@/lib/cafe";
@@ -18,9 +17,8 @@ type CafeContextValue = {
   /** Preview only. The server recomputes every price and discount when the order is placed. */
   pricing: { subtotal: number; discount: number; total: number };
   addToCart: (id: string, quantity?: number) => void;
-  setCustomerType: (customerType: CustomerType) => Promise<ActionResult>;
   setCartQuantity: (id: string, quantity: number) => void;
-  placeOrder: (details: { customerName: string; classGrade?: string; location?: string }) => Promise<ActionResult<{ id: string }>>;
+  placeOrder: (details: { customerName: string; classGrade: string; customerType: CustomerType }) => Promise<ActionResult<{ id: string; totalCents: number }>>;
   addReview: (review: { productId: string; rating: number; comment: string }) => Promise<ActionResult>;
   addProduct: (product: ProductInput) => Promise<ActionResult>;
   updateProduct: (id: string, product: ProductInput) => Promise<ActionResult>;
@@ -102,7 +100,8 @@ export function CafeProvider({ sessionKey, children }: { sessionKey: string; chi
   );
 
   const subtotalCents = liveCart.reduce((sum, item) => sum + toCents(state.products.find(p => p.id === item.productId)?.price ?? 0) * item.quantity, 0);
-  const priced = computePricing(subtotalCents, state.user?.customerType ?? "student");
+  // The bag shows listed prices. Role-based pricing belongs to the checkout form.
+  const priced = computePricing(subtotalCents, "student");
   const pricing = { subtotal: priced.subtotalCents / 100, discount: priced.discountCents / 100, total: priced.totalCents / 100 };
   const cartCount = liveCart.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -131,7 +130,6 @@ export function CafeProvider({ sessionKey, children }: { sessionKey: string; chi
       if (result.ok) setCart([]);
       return result;
     },
-    setCustomerType: customerType => run(() => setCustomerTypeAction({ customerType })),
     addReview: review => run(() => actions.submitReview(review)),
     addProduct: product => run(() => actions.createProduct(product)),
     updateProduct: (id, product) => run(() => actions.updateProduct(id, product)),

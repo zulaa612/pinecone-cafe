@@ -11,13 +11,6 @@ export const loginSchema = z.object({
   password: z.string().min(1, "err.passwordRequired").max(256, "err.invalid"),
 });
 
-export const registerSchema = z.object({
-  name: z.string().trim().min(2, "err.name").max(80, "err.name"),
-  email: z.string().trim().toLowerCase().email("err.email").max(254, "err.email"),
-  password: z.string().min(8, "err.passwordMin").max(256, "err.invalid"),
-  customerType: z.enum(CUSTOMER_TYPES, { message: "err.role" }),
-});
-
 /** Field errors are already translated by the server. */
 export type FormState = { error?: string; fieldErrors?: Record<string, string[] | undefined> };
 
@@ -33,8 +26,8 @@ export const productSchema = z.object({
 
 export const orderSchema = z.object({
   customerName: z.string().trim().min(2, "err.name").max(80, "err.name"),
-  classGrade: z.string().trim().max(30, "err.invalid").optional(),
-  location: z.string().trim().max(100, "err.invalid").optional(),
+  classGrade: z.string().trim().min(1, "err.classRequired").max(30, "err.invalid"),
+  customerType: z.enum(CUSTOMER_TYPES, { message: "err.role" }),
   items: z.array(z.object({
     productId: z.string().min(1, "err.invalid"),
     quantity: z.number().int("err.invalid").min(1, "err.invalid").max(99, "err.invalid"),

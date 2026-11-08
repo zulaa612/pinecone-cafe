@@ -1,5 +1,4 @@
 import admin from "./admin";
-import auth from "./auth";
 import common from "./common";
 import customer from "./customer";
 import orders from "./orders";
@@ -11,10 +10,9 @@ export type MessageKey =
   | keyof typeof storefront.en
   | keyof typeof orders.en
   | keyof typeof admin.en
-  | keyof typeof auth.en
   | keyof typeof customer.en;
 
-const namespaces = [common, storefront, orders, admin, auth, customer];
+const namespaces = [common, storefront, orders, admin, customer];
 export const messages: Record<Lang, Record<string, string>> = {
   en: Object.assign({}, ...namespaces.map(n => n.en)),
   mn: Object.assign({}, ...namespaces.map(n => n.mn)),

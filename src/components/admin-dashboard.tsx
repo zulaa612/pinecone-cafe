@@ -599,14 +599,6 @@ function OrderCard({
       </ul>
       {order.classGrade && <p className="adm-order-note">{t("adm.order.class", { value: order.classGrade })}</p>}
       {order.location && <p className="adm-order-address">{t("adm.order.deliverTo", { value: order.location })}</p>}
-      {order.discount > 0 && (
-        <p className="adm-order-note">
-          {t("adm.order.discount", {
-            subtotal: money(order.subtotal),
-            discount: money(order.discount),
-          })}
-        </p>
-      )}
       <div className="adm-ticket-total">
         <span>
           {t("adm.order.items", {
