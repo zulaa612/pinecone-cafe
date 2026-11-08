@@ -9,7 +9,7 @@ import { Modal } from "@/components/modal";
 import { money, type Order, type Product } from "@/lib/cafe";
 import { signOutStaff } from "@/app/admin/actions";
 
-const categories: Product["category"][] = ["Coffee", "Non-Coffee", "Food & Pastries"];
+const categories: Product["category"][] = ["Coffee", "Non-Coffee", "Meal"];
 const statuses: Order["status"][] = ["Pending", "Preparing", "Ready", "Completed"];
 const statusLabels = { Pending: "Pending", Preparing: "In preparation", Ready: "Ready to go", Completed: "Completed" };
 const nextLabels = { Pending: "Start preparing", Preparing: "Mark as ready", Ready: "Complete order", Completed: "Completed" };
@@ -46,7 +46,7 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
       </aside>
 
       <div className="adm-workspace">
-        <header className="adm-topbar"><div><span className="adm-topbar-label">YOUR CAFÉ, AT A GLANCE</span><span className="adm-topbar-title">Admin dashboard</span></div><div className="adm-topbar-right">{demo && <span className="adm-demo-pill">Demo workspace</span>}<span className="adm-live-pill"><span />Café is open</span><span className="adm-avatar">PP</span></div></header>
+        <header className="adm-topbar"><div><span className="adm-topbar-label">YOUR CA</span><span className="adm-topbar-title">Admin dashboard</span></div><div className="adm-topbar-right">{demo && <span className="adm-demo-pill">Demo workspace</span>}<span className="adm-live-pill"><span />Café is open</span><span className="adm-avatar">PP</span></div></header>
         <main className="adm-main">
           <div className="adm-page-heading"><div><span className="adm-eyebrow">A LITTLE ORGANIZATION. A LOT OF GOOD COFFEE.</span><h1>{tab === "orders" ? "Keep the good things moving." : "Something for every craving."}</h1><p>{tab === "orders" ? "Every order is a chance to make someone’s day." : "Craft your menu, from the first sip to the last bite."}</p></div>{tab === "menu" && <button className="adm-primary" onClick={() => setEditing("new")}><Icon name="plus" size={18} />Add new product</button>}</div>
           {demo && <div className="adm-workspace-note"><Icon name="lock" size={15} /><span>Demo workspace · Menu and order changes are saved in this browser.</span></div>}

@@ -1,4 +1,4 @@
-export type Category = "Coffee" | "Non-Coffee" | "Food & Pastries";
+export type Category = "Coffee" | "Non-Coffee" | "Meal";
 export type Product = { id: string; name: string; category: Category; price: number; description: string; image: string; badge?: string; available: boolean };
 export type OrderStatus = "Pending" | "Preparing" | "Ready" | "Completed";
 export type OrderDetails = { customer: string; email: string; phone: string; fulfillment: "pickup" | "delivery"; address?: string; notes?: string };
