@@ -5,17 +5,17 @@
 .auth-card > p { color: var(--muted); font-size: 14px; line-height: 1.6; margin: 0 0 22px; }
 .auth-form { display: grid; gap: 16px; }
 .auth-form label { display: grid; gap: 6px; font-size: 13px; font-weight: 600; }
-.auth-form input:not([type="radio"]) { font: inherit; font-weight: 400; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: inherit; }
+.auth-form input:not([type="radio"]) { font: inherit; font-weight: 400; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--c-ffffff); color: inherit; }
 .auth-form input:focus-visible, .auth-form button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
-.auth-form input[aria-invalid="true"] { border-color: #b3402f; }
+.auth-form input[aria-invalid="true"] { border-color: var(--c-b3402f); }
 .auth-form small { font-weight: 400; color: var(--muted); }
-.auth-form small[role="alert"], .auth-error { color: #b3402f; font-size: 13px; margin: 0; }
+.auth-form small[role="alert"], .auth-error { color: var(--c-b3402f); font-size: 13px; margin: 0; }
 .auth-roles { border: 0; padding: 0; margin: 0; display: grid; gap: 10px; }
 .auth-roles legend { font-size: 13px; font-weight: 600; margin-bottom: 8px; padding: 0; }
 .auth-roles label { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
-.auth-roles label:has(input:checked) { border-color: var(--gold); background: #fbf5ea; }
+.auth-roles label:has(input:checked) { border-color: var(--gold); background: var(--c-fbf5ea); }
 .auth-roles span { display: grid; gap: 2px; }
-.auth-form button[type="submit"] { font: inherit; font-weight: 700; padding: 14px; border: 0; border-radius: 999px; background: var(--espresso); color: #fff; cursor: pointer; }
+.auth-form button[type="submit"] { font: inherit; font-weight: 700; padding: 14px; border: 0; border-radius: 999px; background: var(--espresso); color: var(--c-ffffff); cursor: pointer; }
 .auth-form button[type="submit"]:disabled { opacity: .6; cursor: progress; }
 .auth-switch { margin: 20px 0 0; text-align: center; font-size: 13px; color: var(--muted); }
 .auth-switch a, .ord-signin-prompt a { color: var(--gold); font-weight: 600; }

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import * as actions from "@/app/actions/cafe";
 import type { ActionResult, AppUser, CafeState, CartItem, Order, OrderStatus, Product, Review } from "@/lib/cafe";
 import { toCents } from "@/lib/cafe";
@@ -33,7 +33,7 @@ const POLL_MS = 20_000;
 const emptyState: CafeState = { user: null, products: [], orders: [], reviews: [] };
 const CafeContext = createContext<CafeContextValue | null>(null);
 
-export function CafeProvider({ children }: { children: ReactNode }) {
+export function CafeProvider({ sessionKey, children }: { sessionKey: string; children: ReactNode }) {
   const { t } = useI18n();
   const [state, setState] = useState<CafeState>(emptyState);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -62,6 +62,14 @@ export function CafeProvider({ children }: { children: ReactNode }) {
     document.addEventListener("visibilitychange", onFocus);
     return () => { clearInterval(timer); window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onFocus); };
   }, [refresh]);
+
+  // Sign-in/out changes sessionKey (from the server layout); refetch so the header and orders update at once.
+  const lastSessionKey = useRef(sessionKey);
+  useEffect(() => {
+    if (lastSessionKey.current === sessionKey) return;
+    lastSessionKey.current = sessionKey;
+    void refresh();
+  }, [sessionKey, refresh]);
 
   // Cart: the only client-side persistence. Legacy localStorage data from the prototype is discarded.
   useEffect(() => {

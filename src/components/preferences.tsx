@@ -19,6 +19,10 @@ const getTheme = (): Theme => (document.documentElement.dataset.theme === "dark"
 export function useTheme() {
   const theme = useSyncExternalStore(subscribe, getTheme, () => "light" as Theme);
   const setTheme = (next: Theme) => {
+    // Animate only this change (never the first paint), then remove the class again.
+    const root = document.documentElement;
+    root.classList.add("theme-anim");
+    window.setTimeout(() => root.classList.remove("theme-anim"), 350);
     document.documentElement.dataset.theme = next;
     document.documentElement.style.colorScheme = next;
     try { localStorage.setItem(THEME_KEY, next); } catch { /* storage may be unavailable */ }

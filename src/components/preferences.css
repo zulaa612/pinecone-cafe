@@ -1,0 +1,41 @@
+/* Language switcher and theme toggle (components/preferences.tsx). */
+.pref-button {
+  display: inline-grid; place-items: center; flex-shrink: 0;
+  width: 38px; height: 38px; padding: 0;
+  border: 1px solid var(--line); border-radius: 999px;
+  background: transparent; color: inherit; cursor: pointer;
+}
+.pref-button:hover { border-color: var(--gold); color: var(--gold); }
+.pref-button:focus-visible, .pref-lang button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+.pref-lang {
+  display: inline-flex; flex-shrink: 0; align-items: center; gap: 2px;
+  padding: 3px; border: 1px solid var(--line); border-radius: 999px;
+}
+.pref-lang button {
+  font: inherit; font-size: 11px; font-weight: 700; letter-spacing: .06em; line-height: 1;
+  padding: 7px 10px; border: 0; border-radius: 999px;
+  background: transparent; color: var(--muted); cursor: pointer;
+}
+.pref-lang button:hover { color: var(--espresso); }
+.pref-lang button.pref-lang-active { background: var(--espresso); color: var(--cream); }
+
+.auth-prefs { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 14px; }
+
+/* Smooth theme change: html gets .theme-anim only while toggling, never on first load. */
+html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after {
+  transition: background-color .3s ease, color .3s ease, border-color .3s ease, fill .3s ease, stroke .3s ease, box-shadow .3s ease !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after { transition: none !important; }
+}
+
+.adm-login-prefs { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 12px; }
+.adm-topbar-right { gap: 10px; }
+
+.mobile-nav-preferences { display: flex; align-items: center; gap: 10px; padding-top: 14px; margin-top: 8px; border-top: 1px solid var(--line); }
+.storefront .footer-bottom { flex-wrap: wrap; gap: 8px 24px; }
+.storefront .header-actions { gap: 10px; }
+@media (max-width: 1150px) { .storefront .track-button span { display: none; } }
+@media (max-width: 700px) { .storefront .header-actions > .pref-lang, .storefront .header-actions > .theme-toggle { display: none; } }
+.user-chip a, .user-chip button, .storefront .track-button, .storefront .cart-button { white-space: nowrap; }

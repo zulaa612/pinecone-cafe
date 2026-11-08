@@ -9,28 +9,18 @@ import { Modal } from "@/components/modal";
 import { money, type ActionResult, type Order, type OrderStatus, type Product } from "@/lib/cafe";
 import type { ProductInput } from "@/components/cafe-provider";
 import { signOutStaff } from "@/app/admin/actions";
+import { useI18n } from "@/components/i18n-provider";
+import { LanguageSwitcher, ThemeToggle } from "@/components/preferences";
 
 const categories: Product["category"][] = ["Coffee", "Non-Coffee", "Meal"];
 const statuses = ["pending", "preparing", "ready", "completed"] as const;
-const statusLabels: Record<OrderStatus, string> = {
-  pending: "Pending",
-  preparing: "In preparation",
-  ready: "Ready to go",
-  completed: "Completed",
-  cancelled: "Cancelled",
-};
 const nextStatus: Partial<Record<OrderStatus, OrderStatus>> = {
   pending: "preparing",
   preparing: "ready",
   ready: "completed",
 };
-const nextLabels: Record<OrderStatus, string> = {
-  pending: "Start preparing",
-  preparing: "Mark as ready",
-  ready: "Complete order",
-  completed: "Completed",
-  cancelled: "Cancelled",
-};
+
+const ALL = "all";
 
 export function AdminDashboard({ demo }: { demo: boolean }) {
   const {
@@ -41,9 +31,10 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
     deleteProduct,
     updateOrderStatus,
   } = useCafe();
+  const { t } = useI18n();
   const [tab, setTab] = useState<"orders" | "menu">("menu");
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("All categories");
+  const [category, setCategory] = useState(ALL);
   const [editing, setEditing] = useState<Product | "new" | null>(null);
   const [deleting, setDeleting] = useState<Product | null>(null);
   const [notice, setNotice] = useState("");
@@ -55,7 +46,7 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
     .reduce((sum, order) => sum + order.total, 0);
   const visibleProducts = products.filter(
     (product) =>
-      (category === "All categories" || product.category === category) &&
+      (category === ALL || product.category === category) &&
       `${product.name} ${product.description}`
         .toLowerCase()
         .includes(search.toLowerCase()),
@@ -68,7 +59,9 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
         : await addProduct(product);
     if (result.ok) {
       setNotice(
-        `${product.name} ${editing === "new" ? "added to" : "updated on"} the menu.`,
+        t(editing === "new" ? "adm.notice.added" : "adm.notice.updated", {
+          name: product.name,
+        }),
       );
       setEditing(null);
     }
@@ -88,13 +81,13 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
           </span>
           <span>
             Pine & Pour
-            <span className="adm-brand-sub">COFFEE & LITTLE MOMENTS</span>
+            <span className="adm-brand-sub">{t("adm.brand.sub")}</span>
           </span>
         </Link>
         <span className="adm-access-label">
-          <span /> ADMIN SECTION
+          <span /> {t("adm.nav.section")}
         </span>
-        <nav className="adm-navigation" aria-label="Admin navigation">
+        <nav className="adm-navigation" aria-label={t("adm.nav.label")}>
           <button
             className={
               tab === "orders" ? "adm-nav-item adm-nav-active" : "adm-nav-item"
@@ -103,7 +96,7 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
             onClick={() => setTab("orders")}
           >
             <Icon name="receipt" size={20} />
-            Order board
+            {t("adm.nav.orders")}
             <span className="adm-nav-count">{activeOrders.length}</span>
           </button>
           <button
@@ -114,30 +107,30 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
             onClick={() => setTab("menu")}
           >
             <Icon name="grid" size={20} />
-            Menu management
+            {t("adm.nav.menu")}
           </button>
         </nav>
         <div className="adm-sidebar-bottom">
           <div className="adm-sidebar-card">
-            <span>GOOD THINGS ARE BREWING</span>
-            <p>A well-run café starts with a little care.</p>
+            <span>{t("adm.sidebar.cardTitle")}</span>
+            <p>{t("adm.sidebar.cardText")}</p>
             <Icon name="coffee" size={30} />
           </div>
           <Link href="/" className="adm-nav-item">
             <Icon name="arrow-left" size={19} />
-            Customer section
+            {t("adm.nav.customer")}
           </Link>
           <form action={signOutStaff}>
             <button className="adm-nav-item" type="submit">
               <Icon name="log-out" size={19} />
-              Sign out
+              {t("common.signOut")}
             </button>
           </form>
           <div className="adm-staff-profile">
             <span>PP</span>
             <div>
-              <strong>Pine & Pour team</strong>
-              <small>Administrator</small>
+              <strong>{t("adm.profile.team")}</strong>
+              <small>{t("adm.profile.role")}</small>
             </div>
             <span className="adm-online-dot" />
           </div>
@@ -147,15 +140,17 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
       <div className="adm-workspace">
         <header className="adm-topbar">
           <div>
-            <span className="adm-topbar-label">YOUR CA</span>
-            <span className="adm-topbar-title">Admin dashboard</span>
+            <span className="adm-topbar-label">{t("adm.top.label")}</span>
+            <span className="adm-topbar-title">{t("adm.top.title")}</span>
           </div>
           <div className="adm-topbar-right">
-            {demo && <span className="adm-demo-pill">Demo workspace</span>}
+            {demo && <span className="adm-demo-pill">{t("adm.top.demo")}</span>}
             <span className="adm-live-pill">
               <span />
-              Café is open
+              {t("adm.top.open")}
             </span>
+            <LanguageSwitcher />
+            <ThemeToggle />
             <span className="adm-avatar">PP</span>
           </div>
         </header>
@@ -163,23 +158,23 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
           <div className="adm-page-heading">
             <div>
               <span className="adm-eyebrow">
-                A LITTLE ORGANIZATION. A LOT OF GOOD COFFEE.
+                {t("adm.heading.eyebrow")}
               </span>
               <h1>
                 {tab === "orders"
-                  ? "Keep the good things moving."
-                  : "Something for every craving."}
+                  ? t("adm.heading.ordersTitle")
+                  : t("adm.heading.menuTitle")}
               </h1>
               <p>
                 {tab === "orders"
-                  ? "Every order is a chance to make someone’s day."
-                  : "Craft your menu, from the first sip to the last bite."}
+                  ? t("adm.heading.ordersText")
+                  : t("adm.heading.menuText")}
               </p>
             </div>
             {tab === "menu" && (
               <button className="adm-primary" onClick={() => setEditing("new")}>
                 <Icon name="plus" size={18} />
-                Add new product
+                {t("adm.action.addProduct")}
               </button>
             )}
           </div>
@@ -187,8 +182,7 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
             <div className="adm-workspace-note">
               <Icon name="lock" size={15} />
               <span>
-                Demo workspace · Menu and order changes are saved in this
-                browser.
+                {t("adm.demo.note")}
               </span>
             </div>
           )}
@@ -202,7 +196,7 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
                 <Icon name="check" size={17} />
                 <span>{notice}</span>
                 <button
-                  aria-label="Dismiss notification"
+                  aria-label={t("adm.notice.dismiss")}
                   onClick={() => setNotice("")}
                 >
                   <Icon name="close" size={16} />
@@ -210,32 +204,34 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
               </>
             )}
           </div>
-          <section className="adm-stats" aria-label="Café statistics">
+          <section className="adm-stats" aria-label={t("adm.stats.label")}>
             <Stat
-              label="Active orders"
+              label={t("adm.stats.active")}
               value={String(activeOrders.length).padStart(2, "0")}
-              caption="A little happiness in the making"
+              caption={t("adm.stats.activeCaption")}
               icon="receipt"
             />
             <Stat
-              label="Ready for collection"
+              label={t("adm.stats.ready")}
               value={String(
                 orders.filter((order) => order.status === "ready")
                   .length,
               ).padStart(2, "0")}
-              caption="Freshly made and ready to go"
+              caption={t("adm.stats.readyCaption")}
               icon="check"
             />
             <Stat
-              label="Completed sales"
+              label={t("adm.stats.sales")}
               value={money(revenue)}
-              caption="From completed orders"
+              caption={t("adm.stats.salesCaption")}
               icon="coffee"
             />
             <Stat
-              label="On the menu"
+              label={t("adm.stats.menu")}
               value={String(products.length).padStart(2, "0")}
-              caption={`${products.filter((product) => product.available).length} delicious things available`}
+              caption={t("adm.stats.menuCaption", {
+                count: products.filter((product) => product.available).length,
+              })}
               icon="grid"
             />
           </section>
@@ -248,13 +244,13 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
               <div className="adm-section-heading">
                 <div>
                   <h2 id="adm-orders-title">
-                    The order board <span>{orders.length}</span>
+                    {t("adm.board.title")} <span>{orders.length}</span>
                   </h2>
-                  <p>From a fresh order to a happy customer.</p>
+                  <p>{t("adm.board.subtitle")}</p>
                 </div>
                 <span className="adm-updated">
                   <span />
-                  Updates saved automatically
+                  {t("adm.board.saved")}
                 </span>
               </div>
               <div className="adm-board">
@@ -262,11 +258,13 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
                   <section
                     key={status}
                     className={`adm-column adm-column-${status.toLowerCase()}`}
-                    aria-label={`${statusLabels[status]} orders`}
+                    aria-label={t("adm.board.columnLabel", {
+                      status: t(`status.${status}`),
+                    })}
                   >
                     <div className="adm-column-heading">
                       <span className="adm-status-dot" />
-                      <h3>{statusLabels[status]}</h3>
+                      <h3>{t(`status.${status}`)}</h3>
                       <span className="adm-column-count">
                         {
                           orders.filter(
@@ -287,7 +285,10 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
                               if (next) {
                                 await report(
                                   await updateOrderStatus(order.id, next),
-                                  `Order ${order.id} moved to ${statusLabels[next].toLowerCase()}.`,
+                                  t("adm.notice.orderMoved", {
+                                    id: order.id,
+                                    status: t(`status.${next}`).toLowerCase(),
+                                  }),
                                 );
                               }
                             }}
@@ -303,8 +304,10 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
                           />
                           <p>
                             {status === "pending"
-                              ? "Ready for the next good thing."
-                              : `No ${statusLabels[status].toLowerCase()} orders yet.`}
+                              ? t("adm.board.emptyPending")
+                              : t("adm.board.emptyColumn", {
+                                  status: t(`status.${status}`).toLowerCase(),
+                                })}
                           </p>
                         </div>
                       )}
@@ -321,9 +324,9 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
               <div className="adm-section-heading">
                 <div>
                   <h2 id="adm-menu-title">
-                    Your menu <span>{products.length}</span>
+                    {t("adm.menu.title")} <span>{products.length}</span>
                   </h2>
-                  <p>Little details. Delicious possibilities.</p>
+                  <p>{t("adm.menu.subtitle")}</p>
                 </div>
               </div>
               <div className="adm-menu-toolbar">
@@ -333,18 +336,20 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
                     type="search"
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Find something on the menu…"
-                    aria-label="Search menu products"
+                    placeholder={t("adm.menu.searchPlaceholder")}
+                    aria-label={t("adm.menu.searchLabel")}
                   />
                 </label>
                 <select
-                  aria-label="Filter products by category"
+                  aria-label={t("adm.menu.filterLabel")}
                   value={category}
                   onChange={(event) => setCategory(event.target.value)}
                 >
-                  <option>All categories</option>
+                  <option value={ALL}>{t("adm.menu.allCategories")}</option>
                   {categories.map((item) => (
-                    <option key={item}>{item}</option>
+                    <option key={item} value={item}>
+                      {t(`category.${item}`)}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -352,12 +357,12 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
                 <table className="adm-product-table">
                   <thead>
                     <tr>
-                      <th scope="col">Product</th>
-                      <th scope="col">Category</th>
-                      <th scope="col">Price</th>
-                      <th scope="col">Availability</th>
+                      <th scope="col">{t("adm.table.product")}</th>
+                      <th scope="col">{t("adm.table.category")}</th>
+                      <th scope="col">{t("adm.table.price")}</th>
+                      <th scope="col">{t("adm.table.availability")}</th>
                       <th scope="col">
-                        <span className="adm-sr-only">Actions</span>
+                        <span className="adm-sr-only">{t("adm.table.actions")}</span>
                       </th>
                     </tr>
                   </thead>
@@ -381,41 +386,55 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
                         </td>
                         <td>
                           <span className="adm-category-tag">
-                            {product.category}
+                            {t(`category.${product.category}`)}
                           </span>
                         </td>
                         <td className="adm-price">{money(product.price)}</td>
                         <td>
                           <button
                             className={`adm-availability ${product.available ? "adm-available" : ""}`}
-                            aria-label={`${product.name}: ${product.available ? "available" : "unavailable"}. Toggle availability`}
+                            aria-label={t("adm.table.toggleLabel", {
+                              name: product.name,
+                              state: t(
+                                product.available
+                                  ? "adm.state.available"
+                                  : "adm.state.unavailable",
+                              ),
+                            })}
                             aria-pressed={product.available}
                             onClick={async () => {
                               const { id, rating, reviewCount, badge, ...rest } = product;
                               void rating; void reviewCount; void badge;
                               await report(
                                 await updateProduct(id, { ...rest, available: !product.available }),
-                                `${product.name} is now ${product.available ? "unavailable" : "available"}.`,
+                                t(
+                                  product.available
+                                    ? "adm.notice.nowUnavailable"
+                                    : "adm.notice.nowAvailable",
+                                  { name: product.name },
+                                ),
                               );
                             }}
                           >
                             <span />
-                            {product.available ? "Available" : "Sold out"}
+                            {product.available
+                              ? t("adm.availability.available")
+                              : t("adm.availability.soldOut")}
                           </button>
                         </td>
                         <td>
                           <div className="adm-row-actions">
                             <button
-                              aria-label={`Edit ${product.name}`}
-                              title="Edit product"
+                              aria-label={t("adm.table.editLabel", { name: product.name })}
+                              title={t("adm.table.editTitle")}
                               onClick={() => setEditing(product)}
                             >
                               <Icon name="edit" size={17} />
                             </button>
                             <button
                               className="adm-delete-action"
-                              aria-label={`Delete ${product.name}`}
-                              title="Delete product"
+                              aria-label={t("adm.table.deleteLabel", { name: product.name })}
+                              title={t("adm.table.deleteTitle")}
                               onClick={() => setDeleting(product)}
                             >
                               <Icon name="trash" size={17} />
@@ -434,23 +453,23 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
                     />
                     <h3>
                       {products.length
-                        ? "No products found"
-                        : "Your first product starts here."}
+                        ? t("adm.empty.noneFound")
+                        : t("adm.empty.first")}
                     </h3>
                     <p>
                       {products.length
-                        ? "Try another search or category."
-                        : "Add a product to make it available in the customer section."}
+                        ? t("adm.empty.tryOther")
+                        : t("adm.empty.addHint")}
                     </p>
                     {products.length ? (
                       <button
                         className="adm-secondary"
                         onClick={() => {
                           setSearch("");
-                          setCategory("All categories");
+                          setCategory(ALL);
                         }}
                       >
-                        Clear filters
+                        {t("adm.empty.clear")}
                       </button>
                     ) : (
                       <button
@@ -458,21 +477,24 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
                         onClick={() => setEditing("new")}
                       >
                         <Icon name="plus" size={17} />
-                        Add your first product
+                        {t("adm.action.addFirst")}
                       </button>
                     )}
                   </div>
                 )}
               </div>
               <div className="adm-table-footer">
-                Showing {visibleProducts.length} of {products.length} menu items
-                <span>Thoughtfully made. Always.</span>
+                {t("adm.table.showing", {
+                  shown: visibleProducts.length,
+                  total: products.length,
+                })}
+                <span>{t("adm.table.footer")}</span>
               </div>
             </section>
           )}
           <footer className="adm-footer">
-            <span>© 2026 Pine & Pour</span>
-            <span>Good coffee. Good company. Good days.</span>
+            <span>{t("adm.footer.copy")}</span>
+            <span>{t("adm.footer.tagline")}</span>
           </footer>
         </main>
       </div>
@@ -486,29 +508,28 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
       )}
       {deleting && (
         <Modal
-          title="Take this off the menu?"
+          title={t("adm.delete.title")}
           onClose={() => setDeleting(null)}
           className="adm-confirm-modal"
         >
           <p className="adm-modal-copy">
-            <strong>{deleting.name}</strong> will be removed from your menu.
-            Existing orders will keep their original item details.
+            {t("adm.delete.body", { name: deleting.name })}
           </p>
           <div className="adm-form-actions">
             <button className="adm-secondary" onClick={() => setDeleting(null)}>
-              Keep product
+              {t("adm.delete.keep")}
             </button>
             <button
               className="adm-danger"
               onClick={async () => {
                 await report(
                   await deleteProduct(deleting.id),
-                  `${deleting.name} removed from the menu.`,
+                  t("adm.notice.removed", { name: deleting.name }),
                 );
                 setDeleting(null);
               }}
             >
-              Remove product
+              {t("adm.delete.confirm")}
             </button>
           </div>
         </Modal>
@@ -549,10 +570,11 @@ function OrderCard({
   order: Order;
   onAdvance: () => void;
 }) {
-  const time = new Date(order.createdAt).toLocaleTimeString("en-US", {
+  const { t, locale } = useI18n();
+  const time = new Date(order.createdAt).toLocaleTimeString(locale, {
     hour: "numeric",
     minute: "2-digit",
-    timeZone: "Asia/Singapore",
+    timeZone: "Asia/Ulaanbaatar",
   });
   const status = order.status;
   return (
@@ -564,7 +586,7 @@ function OrderCard({
       <div className="adm-ticket-customer">
         <h4>{order.customerName}</h4>
         <span className={`adm-fulfillment adm-fulfillment-${order.customerType === "teacher" ? "delivery" : "pickup"}`}>
-          {order.customerType === "teacher" ? "Teacher" : "Student"}
+          {t(order.customerType === "teacher" ? "role.teacher" : "role.student")}
         </span>
       </div>
       <ul className="adm-ticket-items">
@@ -575,16 +597,21 @@ function OrderCard({
           </li>
         ))}
       </ul>
-      {order.classGrade && <p className="adm-order-note">Class: {order.classGrade}</p>}
-      {order.location && <p className="adm-order-address">Deliver to: {order.location}</p>}
+      {order.classGrade && <p className="adm-order-note">{t("adm.order.class", { value: order.classGrade })}</p>}
+      {order.location && <p className="adm-order-address">{t("adm.order.deliverTo", { value: order.location })}</p>}
       {order.discount > 0 && (
         <p className="adm-order-note">
-          {money(order.subtotal)} − 50% teacher discount ({money(order.discount)})
+          {t("adm.order.discount", {
+            subtotal: money(order.subtotal),
+            discount: money(order.discount),
+          })}
         </p>
       )}
       <div className="adm-ticket-total">
         <span>
-          {order.items.reduce((total, item) => total + item.quantity, 0)} items
+          {t("adm.order.items", {
+            count: order.items.reduce((total, item) => total + item.quantity, 0),
+          })}
         </span>
         <strong>{money(order.total)}</strong>
       </div>
@@ -593,7 +620,9 @@ function OrderCard({
         onClick={onAdvance}
         disabled={!nextStatus[status]}
       >
-        {nextLabels[status]}
+        {nextStatus[status]
+          ? t(`adm.next.${status as "pending" | "preparing" | "ready"}`)
+          : t(`status.${status}`)}
         <Icon
           name={!nextStatus[status] ? "check" : "arrow-right"}
           size={15}
@@ -614,6 +643,7 @@ function ProductEditor({
   onClose: () => void;
   onSave: (value: ProductInput) => Promise<ActionResult>;
 }) {
+  const { t } = useI18n();
   const [saveError, setSaveError] = useState("");
   const [saving, setSaving] = useState(false);
   const [image, setImage] = useState(product?.image || "");
@@ -646,11 +676,11 @@ function ProductEditor({
   function upload(file: File | undefined) {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      setImageError("Please choose an image file.");
+      setImageError(t("adm.form.errNotImage"));
       return;
     }
     if (file.size > 1024 * 1024) {
-      setImageError("Choose an image smaller than 1 MB.");
+      setImageError(t("adm.form.errTooLarge"));
       return;
     }
     setImageError("");
@@ -661,7 +691,7 @@ function ProductEditor({
       setUploading(false);
     };
     reader.onerror = () => {
-      setImageError("We couldn’t read that image. Please try another.");
+      setImageError(t("adm.form.errRead"));
       setUploading(false);
     };
     reader.readAsDataURL(file);
@@ -669,14 +699,14 @@ function ProductEditor({
 
   return (
     <Modal
-      title={product ? "A little menu refresh." : "Something new is brewing."}
+      title={product ? t("adm.form.titleEdit") : t("adm.form.titleNew")}
       onClose={onClose}
       className="adm-product-modal"
     >
       <p className="adm-modal-copy">
         {product
-          ? "Make this favorite even better."
-          : "Add your next customer favorite to the menu."}
+          ? t("adm.form.copyEdit")
+          : t("adm.form.copyNew")}
       </p>
       <form className="adm-product-form" onSubmit={submit}>
         <div className="adm-upload-area">
@@ -684,15 +714,15 @@ function ProductEditor({
             <>
               <Image
                 src={image}
-                alt="Product image preview"
+                alt={t("adm.form.previewAlt")}
                 width={73}
                 height={73}
                 unoptimized
               />
               <div>
-                <strong>Looking delicious.</strong>
+                <strong>{t("adm.form.looksGood")}</strong>
                 <button type="button" onClick={() => fileRef.current?.click()}>
-                  Choose another photo
+                  {t("adm.form.chooseAnother")}
                 </button>
               </div>
             </>
@@ -702,10 +732,10 @@ function ProductEditor({
                 <Icon name="upload" size={23} />
               </span>
               <div>
-                <strong>Add a product photo</strong>
-                <p>JPG, PNG or WebP · Up to 1 MB</p>
+                <strong>{t("adm.form.addPhoto")}</strong>
+                <p>{t("adm.form.photoHint")}</p>
                 <button type="button" onClick={() => fileRef.current?.click()}>
-                  Choose image
+                  {t("adm.form.chooseImage")}
                 </button>
               </div>
             </>
@@ -714,7 +744,7 @@ function ProductEditor({
             ref={fileRef}
             type="file"
             accept="image/*"
-            aria-label="Upload product image"
+            aria-label={t("adm.form.uploadLabel")}
             onChange={(event) => upload(event.target.files?.[0])}
           />
         </div>
@@ -724,31 +754,33 @@ function ProductEditor({
           </p>
         )}
         <label htmlFor="product-name">
-          Item name
+          {t("adm.form.name")}
           <input
             id="product-name"
             name="name"
             defaultValue={product?.name}
-            placeholder="e.g. Honey cinnamon latte"
+            placeholder={t("adm.form.namePlaceholder")}
             maxLength={70}
             required
           />
         </label>
         <div className="adm-form-two">
           <label htmlFor="product-category">
-            Category
+            {t("adm.form.category")}
             <select
               id="product-category"
               name="category"
               defaultValue={product?.category || "Coffee"}
             >
               {categories.map((category) => (
-                <option key={category}>{category}</option>
+                <option key={category} value={category}>
+                  {t(`category.${category}`)}
+                </option>
               ))}
             </select>
           </label>
           <label htmlFor="product-price">
-            Price ($)
+            {t("adm.form.price")}
             <input
               id="product-price"
               name="price"
@@ -763,12 +795,12 @@ function ProductEditor({
           </label>
         </div>
         <label htmlFor="product-description">
-          Description
+          {t("adm.form.description")}
           <textarea
             id="product-description"
             name="description"
             defaultValue={product?.description}
-            placeholder="A few delicious details…"
+            placeholder={t("adm.form.descriptionPlaceholder")}
             maxLength={240}
             rows={3}
             required
@@ -780,7 +812,7 @@ function ProductEditor({
             type="checkbox"
             defaultChecked={product?.available ?? true}
           />
-          <span>Available for customers to order</span>
+          <span>{t("adm.form.available")}</span>
         </label>
         <label className="adm-checkbox">
           <input
@@ -788,7 +820,7 @@ function ProductEditor({
             type="checkbox"
             defaultChecked={product?.featured ?? false}
           />
-          <span>Featured (shown when there are no recent bestsellers)</span>
+          <span>{t("adm.form.featured")}</span>
         </label>
         {saveError && (
           <p className="adm-field-error" role="alert">
@@ -797,17 +829,17 @@ function ProductEditor({
         )}
         <div className="adm-form-actions">
           <button type="button" className="adm-secondary" onClick={onClose}>
-            Cancel
+            {t("common.cancel")}
           </button>
           <button className="adm-primary" type="submit" disabled={uploading || saving}>
             <Icon name={product ? "check" : "plus"} size={17} />
             {uploading
-              ? "Reading image…"
+              ? t("adm.form.reading")
               : saving
-                ? "Saving…"
+                ? t("adm.form.saving")
                 : product
-                ? "Save changes"
-                : "Add to menu"}
+                ? t("adm.form.save")
+                : t("adm.form.add")}
           </button>
         </div>
       </form>

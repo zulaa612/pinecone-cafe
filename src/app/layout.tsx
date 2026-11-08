@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Suspense, type ReactNode } from "react";
 import { CafeProvider } from "@/components/cafe-provider";
 import { LanguageProvider } from "@/components/i18n-provider";
+import { readSessionUserId } from "@/lib/auth/session";
 import { getLang } from "@/lib/i18n-server";
 import "./globals.css";
 import "./storefront.css";
@@ -27,8 +28,13 @@ const initScript = `(function(){try{var d=document.documentElement;var t=localSt
 
 /** Reads the language cookie at request time, so it must sit behind Suspense. */
 async function LocaleShell({ children }: { children: ReactNode }) {
-  const lang = await getLang();
-  return <LanguageProvider initialLang={lang}>{children}</LanguageProvider>;
+  const [lang, sessionKey] = await Promise.all([getLang(), readSessionUserId()]);
+  // sessionKey changes when a server action signs the visitor in or out, which tells the client to refetch.
+  return (
+    <LanguageProvider initialLang={lang}>
+      <CafeProvider sessionKey={sessionKey ?? ""}>{children}</CafeProvider>
+    </LanguageProvider>
+  );
 }
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -39,9 +45,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body>
         <Suspense fallback={null}>
-          <LocaleShell>
-            <CafeProvider>{children}</CafeProvider>
-          </LocaleShell>
+          <LocaleShell>{children}</LocaleShell>
         </Suspense>
       </body>
     </html>

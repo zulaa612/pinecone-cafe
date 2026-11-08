@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { AdminDashboard } from "@/components/admin-dashboard";
+import { AdminLoading } from "@/components/admin-loading";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { StaffSignIn } from "./sign-in";
 
@@ -19,5 +20,5 @@ async function StaffArea() {
 }
 
 export default function AdminPage() {
-  return <Suspense fallback={<main className="adm-loading"><span className="adm-loading-dot" /><p>Opening the café dashboard…</p></main>}><StaffArea /></Suspense>;
+  return <Suspense fallback={<AdminLoading />}><StaffArea /></Suspense>;
 }

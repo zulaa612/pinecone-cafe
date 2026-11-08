@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useId, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useI18n } from "@/components/i18n-provider";
 import { Icon } from "./icon";
 
 export function Modal({ title, onClose, children, className = "", footer }: { title: string; onClose: () => void; children: ReactNode; className?: string; footer?: ReactNode }) {
+  const { t } = useI18n();
   const ref = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
   const titleId = useId();
@@ -26,5 +28,5 @@ export function Modal({ title, onClose, children, className = "", footer }: { ti
     return () => { clearTimeout(timer); document.body.style.overflow = overflow; document.removeEventListener("keydown", handleKey); previous?.focus(); };
   }, []);
   if (typeof document === "undefined") return null;
-  return createPortal(<div className={`modal-overlay ${className.includes("drawer") ? "drawer-overlay" : ""}`} onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}><div className={`modal-panel ${className}`} role="dialog" aria-modal="true" aria-labelledby={titleId} ref={ref}><div className="modal-heading"><h2 id={titleId}>{title}</h2><button type="button" className="icon-button" aria-label="Close dialog" onClick={onClose}><Icon name="close" /></button></div><div className="modal-content">{children}</div>{footer && <div className="modal-footer">{footer}</div>}</div></div>, document.body);
+  return createPortal(<div className={`modal-overlay ${className.includes("drawer") ? "drawer-overlay" : ""}`} onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}><div className={`modal-panel ${className}`} role="dialog" aria-modal="true" aria-labelledby={titleId} ref={ref}><div className="modal-heading"><h2 id={titleId}>{title}</h2><button type="button" className="icon-button" aria-label={t("ord.modal.close")} onClick={onClose}><Icon name="close" /></button></div><div className="modal-content">{children}</div>{footer && <div className="modal-footer">{footer}</div>}</div></div>, document.body);
 }
