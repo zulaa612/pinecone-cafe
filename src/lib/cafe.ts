@@ -1,7 +1,7 @@
 export type Category = "Coffee" | "Non-Coffee" | "Meal";
 export type Product = { id: string; name: string; category: Category; price: number; description: string; image: string; badge?: string; available: boolean };
 export type OrderStatus = "Pending" | "Preparing" | "Ready" | "Completed";
-export type OrderDetails = { customer: string; email: string; phone: string; fulfillment: "pickup" | "delivery"; address?: string; notes?: string };
+export type OrderDetails = { customer: string; email: string; phone: string; fulfillment: "pickup"; address?: string; notes?: string };
 export type Order = OrderDetails & { id: string; items: { product: Product; quantity: number }[]; total: number; status: OrderStatus; createdAt: string };
 export type Review = { id: string; name: string; rating: number; comment: string; date: string };
 export type CartItem = { productId: string; quantity: number };

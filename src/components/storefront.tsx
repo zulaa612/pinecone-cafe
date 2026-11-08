@@ -76,7 +76,7 @@ export default function Storefront() {
     : 0;
   function addItem(id: string, name: string) {
     addToCart(id);
-    setToast(`${name} сагсанд нэмэх`);
+    setToast(`${name} сагсанд нэмэгдлээ.`);
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(""), 2800);
   }
@@ -120,7 +120,7 @@ export default function Storefront() {
             <button
               className="cart-button"
               onClick={() => setDialog("cart")}
-              aria-label={`Open bag, ${cartCount} items`}
+              aria-label={`Таны захиалга: ${cartCount}`}
             >
               <Icon name="bag" size={18} />
               <span>Миний захиалга</span>
@@ -385,17 +385,13 @@ export default function Storefront() {
           </button>
         </section>
 
-        
-
         <section id="reviews" className="reviews-section">
           <div className="container">
             <div className="section-heading">
               <div>
-                <div className="eyebrow">
-                  GOOD COFFEE BRINGS GOOD PEOPLE TOGETHER
-                </div>
+                <div className="eyebrow">ТА САНАЛ ХҮСЭЛТ БОЛОН</div>
                 <h2>
-                  Kind words. <em>Full hearts.</em>
+                  ХЭН НЭГЭНД <em>САЙХАН ҮГ ҮЛДЭЭГЭЭРЭЙ.</em>
                 </h2>
                 <div className="review-summary">
                   {reviews.length ? (
@@ -421,7 +417,7 @@ export default function Storefront() {
                 <Icon name="heart" size={27} />
                 <div>
                   <h3>Your kind words belong here.</h3>
-                  <p>Be the first to share your Pine & Pour moment.</p>
+                  <p>Be the first to share your Pinecone & Pour moment.</p>
                 </div>
               </div>
             )}
@@ -476,22 +472,25 @@ export default function Storefront() {
               </p>
             </div>
             <div className="footer-links">
-              <strong>Make yourself at home</strong>
-              <a href="#menu">Our menu</a>
-              <a href="#story">Our story</a>
-              <a href="#reviews">Kind words</a>
+              <strong>
+                <a href="#menu">МЕНЮ</a>
+              </strong>
+              <strong>
+                <a href="#reviews">СЭТГЭГДЭЛ</a>
+              </strong>
             </div>
             <div className="footer-links">
-              <strong>A little help</strong>
-              <button onClick={() => setDialog("track")}>
-                Track your order
-              </button>
-              <button onClick={() => setDialog("review")}>
-                Share your experience
-              </button>
-              <Link href="/admin">
-                Admin section <Icon name="arrow-up-right" size={12} />
-              </Link>
+              <strong>
+                <button onClick={() => setDialog("track")}>
+                  ЗАХИАЛГАА ХЯНАХ
+                </button>
+              </strong>
+
+              <strong>
+                <button onClick={() => setDialog("review")}>
+                  СЭТГЭГДЭЛ ҮЛДЭЭХ
+                </button>
+              </strong>
             </div>
             <div className="footer-last">
               <Icon name="sun" size={28} />
@@ -501,13 +500,10 @@ export default function Storefront() {
                 <br />
                 Stay for the little moments.
               </p>
-              <a className="footer-menu-link" href="#menu">
-                Find your favorite <Icon name="arrow-right" size={16} />
-              </a>
             </div>
           </div>
           <div className="footer-bottom">
-            <span>© 2026 Pine & Pour. Made with care.</span>
+            <span>© 2026 Pinecone & Pourcafe. Made with care.</span>
             <span>Small batch. Big heart. Always.</span>
           </div>
         </div>
@@ -523,13 +519,13 @@ export default function Storefront() {
             setDialog("cart");
           }}
         >
-          View bag <Icon name="arrow-right" size={14} />
+          Сагсанд юу юу оров? <Icon name="arrow-right" size={14} />
         </button>
       </div>
       {cartCount > 0 && (
         <button className="mobile-cart-bar" onClick={() => setDialog("cart")}>
           <span>
-            <Icon name="bag" size={19} /> View your bag <span>{cartCount}</span>
+            <Icon name="bag" size={19} /> Сагс шалгах <span>{cartCount}</span>
           </span>
           <strong>
             {money(cartTotal)} <Icon name="arrow-right" size={17} />
