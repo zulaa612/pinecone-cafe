@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import * as actions from "@/app/actions/cafe";
 import type { ActionResult, AppUser, CafeState, CartItem, Order, OrderStatus, Product, Review } from "@/lib/cafe";
 import { toCents } from "@/lib/cafe";
+import { useI18n } from "@/components/i18n-provider";
 import { computePricing } from "@/lib/pricing";
 
 export type ProductInput = Pick<Product, "name" | "description" | "price" | "category" | "image" | "available" | "featured">;
@@ -33,6 +34,7 @@ const emptyState: CafeState = { user: null, products: [], orders: [], reviews: [
 const CafeContext = createContext<CafeContextValue | null>(null);
 
 export function CafeProvider({ children }: { children: ReactNode }) {
+  const { t } = useI18n();
   const [state, setState] = useState<CafeState>(emptyState);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [status, setStatus] = useState<LoadStatus>("loading");
@@ -108,7 +110,7 @@ export function CafeProvider({ children }: { children: ReactNode }) {
       if (result.ok) await refresh();
       return result;
     } catch {
-      return { ok: false, error: "Something went wrong. Please check your connection and try again." } as T;
+      return { ok: false, error: t("err.network") } as T;
     }
   }
 

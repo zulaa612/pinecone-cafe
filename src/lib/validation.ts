@@ -1,45 +1,58 @@
 import { z } from "zod";
 import { CATEGORIES, CUSTOMER_TYPES, ORDER_STATUSES } from "@/db/schema";
 
-/** Shared by client forms and server actions so both enforce the same rules. */
+/**
+ * Shared by client forms and server actions so both enforce the same rules.
+ * Messages are translation keys (see src/locales/common.ts); the server translates
+ * them with the visitor's language via issueMessage().
+ */
 export const loginSchema = z.object({
-  email: z.string().trim().toLowerCase().email("Enter a valid email address.").max(254),
-  password: z.string().min(1, "Enter your password.").max(256),
+  email: z.string().trim().toLowerCase().email("err.email").max(254, "err.email"),
+  password: z.string().min(1, "err.passwordRequired").max(256, "err.invalid"),
 });
 
 export const registerSchema = z.object({
-  name: z.string().trim().min(2, "Enter your full name.").max(80),
-  email: z.string().trim().toLowerCase().email("Enter a valid email address.").max(254),
-  password: z.string().min(8, "Use at least 8 characters.").max(256),
-  customerType: z.enum(CUSTOMER_TYPES, { message: "Choose Student or Teacher." }),
+  name: z.string().trim().min(2, "err.name").max(80, "err.name"),
+  email: z.string().trim().toLowerCase().email("err.email").max(254, "err.email"),
+  password: z.string().min(8, "err.passwordMin").max(256, "err.invalid"),
+  customerType: z.enum(CUSTOMER_TYPES, { message: "err.role" }),
 });
 
+/** Field errors are already translated by the server. */
 export type FormState = { error?: string; fieldErrors?: Record<string, string[] | undefined> };
 
 export const productSchema = z.object({
-  name: z.string().trim().min(2, "Enter a product name.").max(70),
-  description: z.string().trim().min(1, "Add a short description.").max(240),
-  price: z.number({ message: "Enter a valid price." }).min(0.01, "Price must be at least 0.01.").max(9999),
-  category: z.enum(CATEGORIES, { message: "Choose a category." }),
-  image: z.string().max(2_000_000),
+  name: z.string().trim().min(2, "err.productName").max(70, "err.productName"),
+  description: z.string().trim().min(1, "err.description").max(240, "err.description"),
+  price: z.number({ message: "err.price" }).min(0.01, "err.priceMin").max(9999, "err.price"),
+  category: z.enum(CATEGORIES, { message: "err.category" }),
+  image: z.string().max(2_000_000, "err.imageSize"),
   available: z.boolean(),
   featured: z.boolean().default(false),
 });
 
 export const orderSchema = z.object({
-  customerName: z.string().trim().min(2, "Enter your full name.").max(80),
-  classGrade: z.string().trim().max(30).optional(),
-  location: z.string().trim().max(100).optional(),
+  customerName: z.string().trim().min(2, "err.name").max(80, "err.name"),
+  classGrade: z.string().trim().max(30, "err.invalid").optional(),
+  location: z.string().trim().max(100, "err.invalid").optional(),
   items: z.array(z.object({
-    productId: z.string().min(1),
-    quantity: z.number().int().min(1).max(99),
-  })).min(1, "Your bag is empty.").max(50),
+    productId: z.string().min(1, "err.invalid"),
+    quantity: z.number().int("err.invalid").min(1, "err.invalid").max(99, "err.invalid"),
+  })).min(1, "err.bagEmpty").max(50, "err.invalid"),
 });
 
-export const orderStatusSchema = z.object({ id: z.string().min(1).max(40), status: z.enum(ORDER_STATUSES, { message: "Invalid status." }) });
+export const orderStatusSchema = z.object({ id: z.string().min(1, "err.invalid").max(40, "err.invalid"), status: z.enum(ORDER_STATUSES, { message: "err.statusInvalid" }) });
 
 export const reviewSchema = z.object({
-  productId: z.string().min(1, "Choose a product."),
-  rating: z.number().int().min(1, "Choose a rating.").max(5),
-  comment: z.string().trim().min(5, "Write at least 5 characters.").max(1000),
+  productId: z.string().min(1, "err.chooseProduct"),
+  rating: z.number().int("err.rating").min(1, "err.rating").max(5, "err.rating"),
+  comment: z.string().trim().min(5, "err.commentMin").max(1000, "err.commentMin"),
 });
+
+/** Maps zod's flattened field errors to translated strings. */
+export function translateFieldErrors(
+  fieldErrors: Record<string, string[] | undefined>,
+  translate: (message: string) => string,
+): Record<string, string[] | undefined> {
+  return Object.fromEntries(Object.entries(fieldErrors).map(([field, messages]) => [field, messages?.map(translate)]));
+}
