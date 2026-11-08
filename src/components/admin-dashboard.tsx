@@ -10,86 +10,605 @@ import { money, type Order, type Product } from "@/lib/cafe";
 import { signOutStaff } from "@/app/admin/actions";
 
 const categories: Product["category"][] = ["Coffee", "Non-Coffee", "Meal"];
-const statuses: Order["status"][] = ["Pending", "Preparing", "Ready", "Completed"];
-const statusLabels = { Pending: "Pending", Preparing: "In preparation", Ready: "Ready to go", Completed: "Completed" };
-const nextLabels = { Pending: "Start preparing", Preparing: "Mark as ready", Ready: "Complete order", Completed: "Completed" };
+const statuses = ["Pending", "Preparing", "Ready", "Completed"] as const;
+type StatusKey = (typeof statuses)[number];
+const statusValues: Record<StatusKey, Order["status"]> = {
+  Pending: "Хүлээгдэж байна...",
+  Preparing: "Бэлдэж байна...",
+  Ready: "Бэлэн болж байна...",
+  Completed: "Амжилттай",
+};
+const statusLabels = {
+  Pending: "Pending",
+  Preparing: "In preparation",
+  Ready: "Ready to go",
+  Completed: "Completed",
+};
+const nextLabels = {
+  Pending: "Start preparing",
+  Preparing: "Mark as ready",
+  Ready: "Complete order",
+  Completed: "Completed",
+};
+
+function statusKey(status: string): StatusKey {
+  return (
+    statuses.find((key) => key === status || statusValues[key] === status) ??
+    "Pending"
+  );
+}
 
 export function AdminDashboard({ demo }: { demo: boolean }) {
-  const { products, orders, addProduct, updateProduct, deleteProduct, updateOrderStatus } = useCafe();
+  const {
+    products,
+    orders,
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    updateOrderStatus,
+  } = useCafe();
   const [tab, setTab] = useState<"orders" | "menu">("menu");
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All categories");
   const [editing, setEditing] = useState<Product | "new" | null>(null);
   const [deleting, setDeleting] = useState<Product | null>(null);
   const [notice, setNotice] = useState("");
-  const activeOrders = orders.filter((order) => order.status !== "Completed");
-  const revenue = orders.filter((order) => order.status === "Completed").reduce((sum, order) => sum + order.total, 0);
-  const visibleProducts = products.filter((product) => (category === "All categories" || product.category === category) && `${product.name} ${product.description}`.toLowerCase().includes(search.toLowerCase()));
+  const activeOrders = orders.filter(
+    (order) => statusKey(order.status) !== "Completed",
+  );
+  const revenue = orders
+    .filter((order) => statusKey(order.status) === "Completed")
+    .reduce((sum, order) => sum + order.total, 0);
+  const visibleProducts = products.filter(
+    (product) =>
+      (category === "All categories" || product.category === category) &&
+      `${product.name} ${product.description}`
+        .toLowerCase()
+        .includes(search.toLowerCase()),
+  );
 
   function saveProduct(product: Omit<Product, "id">) {
     if (editing && editing !== "new") updateProduct(editing.id, product);
     else addProduct(product);
-    setNotice(`${product.name} ${editing === "new" ? "added to" : "updated on"} the menu.`);
+    setNotice(
+      `${product.name} ${editing === "new" ? "added to" : "updated on"} the menu.`,
+    );
     setEditing(null);
   }
 
   return (
     <div className="adm-shell">
       <aside className="adm-sidebar">
-        <Link href="/" className="adm-brand"><span className="adm-brand-mark"><Icon name="coffee" size={24} /></span><span>Pine & Pour<span className="adm-brand-sub">COFFEE & LITTLE MOMENTS</span></span></Link>
-        <span className="adm-access-label"><span /> ADMIN SECTION</span>
+        <Link href="/" className="adm-brand">
+          <span className="adm-brand-mark">
+            <Icon name="coffee" size={24} />
+          </span>
+          <span>
+            Pine & Pour
+            <span className="adm-brand-sub">COFFEE & LITTLE MOMENTS</span>
+          </span>
+        </Link>
+        <span className="adm-access-label">
+          <span /> ADMIN SECTION
+        </span>
         <nav className="adm-navigation" aria-label="Admin navigation">
-          <button className={tab === "orders" ? "adm-nav-item adm-nav-active" : "adm-nav-item"} aria-current={tab === "orders" ? "page" : undefined} onClick={() => setTab("orders")}><Icon name="receipt" size={20} />Order board<span className="adm-nav-count">{activeOrders.length}</span></button>
-          <button className={tab === "menu" ? "adm-nav-item adm-nav-active" : "adm-nav-item"} aria-current={tab === "menu" ? "page" : undefined} onClick={() => setTab("menu")}><Icon name="grid" size={20} />Menu management</button>
+          <button
+            className={
+              tab === "orders" ? "adm-nav-item adm-nav-active" : "adm-nav-item"
+            }
+            aria-current={tab === "orders" ? "page" : undefined}
+            onClick={() => setTab("orders")}
+          >
+            <Icon name="receipt" size={20} />
+            Order board
+            <span className="adm-nav-count">{activeOrders.length}</span>
+          </button>
+          <button
+            className={
+              tab === "menu" ? "adm-nav-item adm-nav-active" : "adm-nav-item"
+            }
+            aria-current={tab === "menu" ? "page" : undefined}
+            onClick={() => setTab("menu")}
+          >
+            <Icon name="grid" size={20} />
+            Menu management
+          </button>
         </nav>
-        <div className="adm-sidebar-bottom"><div className="adm-sidebar-card"><span>GOOD THINGS ARE BREWING</span><p>A well-run café starts with a little care.</p><Icon name="coffee" size={30} /></div><Link href="/" className="adm-nav-item"><Icon name="arrow-left" size={19} />Customer section</Link><form action={signOutStaff}><button className="adm-nav-item" type="submit"><Icon name="log-out" size={19} />Sign out</button></form><div className="adm-staff-profile"><span>PP</span><div><strong>Pine & Pour team</strong><small>Administrator</small></div><span className="adm-online-dot" /></div></div>
+        <div className="adm-sidebar-bottom">
+          <div className="adm-sidebar-card">
+            <span>GOOD THINGS ARE BREWING</span>
+            <p>A well-run café starts with a little care.</p>
+            <Icon name="coffee" size={30} />
+          </div>
+          <Link href="/" className="adm-nav-item">
+            <Icon name="arrow-left" size={19} />
+            Customer section
+          </Link>
+          <form action={signOutStaff}>
+            <button className="adm-nav-item" type="submit">
+              <Icon name="log-out" size={19} />
+              Sign out
+            </button>
+          </form>
+          <div className="adm-staff-profile">
+            <span>PP</span>
+            <div>
+              <strong>Pine & Pour team</strong>
+              <small>Administrator</small>
+            </div>
+            <span className="adm-online-dot" />
+          </div>
+        </div>
       </aside>
 
       <div className="adm-workspace">
-        <header className="adm-topbar"><div><span className="adm-topbar-label">YOUR CA</span><span className="adm-topbar-title">Admin dashboard</span></div><div className="adm-topbar-right">{demo && <span className="adm-demo-pill">Demo workspace</span>}<span className="adm-live-pill"><span />Café is open</span><span className="adm-avatar">PP</span></div></header>
+        <header className="adm-topbar">
+          <div>
+            <span className="adm-topbar-label">YOUR CA</span>
+            <span className="adm-topbar-title">Admin dashboard</span>
+          </div>
+          <div className="adm-topbar-right">
+            {demo && <span className="adm-demo-pill">Demo workspace</span>}
+            <span className="adm-live-pill">
+              <span />
+              Café is open
+            </span>
+            <span className="adm-avatar">PP</span>
+          </div>
+        </header>
         <main className="adm-main">
-          <div className="adm-page-heading"><div><span className="adm-eyebrow">A LITTLE ORGANIZATION. A LOT OF GOOD COFFEE.</span><h1>{tab === "orders" ? "Keep the good things moving." : "Something for every craving."}</h1><p>{tab === "orders" ? "Every order is a chance to make someone’s day." : "Craft your menu, from the first sip to the last bite."}</p></div>{tab === "menu" && <button className="adm-primary" onClick={() => setEditing("new")}><Icon name="plus" size={18} />Add new product</button>}</div>
-          {demo && <div className="adm-workspace-note"><Icon name="lock" size={15} /><span>Demo workspace · Menu and order changes are saved in this browser.</span></div>}
-          <div role="status" aria-live="polite" className={notice ? "adm-notice" : "adm-sr-only"}>{notice && <><Icon name="check" size={17} /><span>{notice}</span><button aria-label="Dismiss notification" onClick={() => setNotice("")}><Icon name="close" size={16} /></button></>}</div>
+          <div className="adm-page-heading">
+            <div>
+              <span className="adm-eyebrow">
+                A LITTLE ORGANIZATION. A LOT OF GOOD COFFEE.
+              </span>
+              <h1>
+                {tab === "orders"
+                  ? "Keep the good things moving."
+                  : "Something for every craving."}
+              </h1>
+              <p>
+                {tab === "orders"
+                  ? "Every order is a chance to make someone’s day."
+                  : "Craft your menu, from the first sip to the last bite."}
+              </p>
+            </div>
+            {tab === "menu" && (
+              <button className="adm-primary" onClick={() => setEditing("new")}>
+                <Icon name="plus" size={18} />
+                Add new product
+              </button>
+            )}
+          </div>
+          {demo && (
+            <div className="adm-workspace-note">
+              <Icon name="lock" size={15} />
+              <span>
+                Demo workspace · Menu and order changes are saved in this
+                browser.
+              </span>
+            </div>
+          )}
+          <div
+            role="status"
+            aria-live="polite"
+            className={notice ? "adm-notice" : "adm-sr-only"}
+          >
+            {notice && (
+              <>
+                <Icon name="check" size={17} />
+                <span>{notice}</span>
+                <button
+                  aria-label="Dismiss notification"
+                  onClick={() => setNotice("")}
+                >
+                  <Icon name="close" size={16} />
+                </button>
+              </>
+            )}
+          </div>
           <section className="adm-stats" aria-label="Café statistics">
-            <Stat label="Active orders" value={String(activeOrders.length).padStart(2, "0")} caption="A little happiness in the making" icon="receipt" />
-            <Stat label="Ready for collection" value={String(orders.filter((order) => order.status === "Ready").length).padStart(2, "0")} caption="Freshly made and ready to go" icon="check" />
-            <Stat label="Completed sales" value={money(revenue)} caption="From completed orders" icon="coffee" />
-            <Stat label="On the menu" value={String(products.length).padStart(2, "0")} caption={`${products.filter((product) => product.available).length} delicious things available`} icon="grid" />
+            <Stat
+              label="Active orders"
+              value={String(activeOrders.length).padStart(2, "0")}
+              caption="A little happiness in the making"
+              icon="receipt"
+            />
+            <Stat
+              label="Ready for collection"
+              value={String(
+                orders.filter((order) => statusKey(order.status) === "Ready")
+                  .length,
+              ).padStart(2, "0")}
+              caption="Freshly made and ready to go"
+              icon="check"
+            />
+            <Stat
+              label="Completed sales"
+              value={money(revenue)}
+              caption="From completed orders"
+              icon="coffee"
+            />
+            <Stat
+              label="On the menu"
+              value={String(products.length).padStart(2, "0")}
+              caption={`${products.filter((product) => product.available).length} delicious things available`}
+              icon="grid"
+            />
           </section>
 
           {tab === "orders" ? (
-            <section className="adm-order-section" aria-labelledby="adm-orders-title">
-              <div className="adm-section-heading"><div><h2 id="adm-orders-title">The order board <span>{orders.length}</span></h2><p>From a fresh order to a happy customer.</p></div><span className="adm-updated"><span />Updates saved automatically</span></div>
-              <div className="adm-board">{statuses.map((status) => <section key={status} className={`adm-column adm-column-${status.toLowerCase()}`} aria-label={`${statusLabels[status]} orders`}><div className="adm-column-heading"><span className="adm-status-dot" /><h3>{statusLabels[status]}</h3><span className="adm-column-count">{orders.filter((order) => order.status === status).length}</span></div><div className="adm-order-list">{orders.filter((order) => order.status === status).map((order) => <OrderCard key={order.id} order={order} onAdvance={() => { const next = statuses[statuses.indexOf(status) + 1]; if (next) { updateOrderStatus(order.id, next); setNotice(`Order ${order.id} moved to ${statusLabels[next].toLowerCase()}.`); } }} />)}{!orders.some((order) => order.status === status) && <div className="adm-empty-column"><Icon name={status === "Completed" ? "check" : "coffee"} size={25} /><p>{status === "Pending" ? "Ready for the next good thing." : `No ${statusLabels[status].toLowerCase()} orders yet.`}</p></div>}</div></section>)}</div>
+            <section
+              className="adm-order-section"
+              aria-labelledby="adm-orders-title"
+            >
+              <div className="adm-section-heading">
+                <div>
+                  <h2 id="adm-orders-title">
+                    The order board <span>{orders.length}</span>
+                  </h2>
+                  <p>From a fresh order to a happy customer.</p>
+                </div>
+                <span className="adm-updated">
+                  <span />
+                  Updates saved automatically
+                </span>
+              </div>
+              <div className="adm-board">
+                {statuses.map((status) => (
+                  <section
+                    key={status}
+                    className={`adm-column adm-column-${status.toLowerCase()}`}
+                    aria-label={`${statusLabels[status]} orders`}
+                  >
+                    <div className="adm-column-heading">
+                      <span className="adm-status-dot" />
+                      <h3>{statusLabels[status]}</h3>
+                      <span className="adm-column-count">
+                        {
+                          orders.filter(
+                            (order) => statusKey(order.status) === status,
+                          ).length
+                        }
+                      </span>
+                    </div>
+                    <div className="adm-order-list">
+                      {orders
+                        .filter((order) => statusKey(order.status) === status)
+                        .map((order) => (
+                          <OrderCard
+                            key={order.id}
+                            order={order}
+                            onAdvance={() => {
+                              const next =
+                                statuses[statuses.indexOf(status) + 1];
+                              if (next) {
+                                updateOrderStatus(order.id, statusValues[next]);
+                                setNotice(
+                                  `Order ${order.id} moved to ${statusLabels[next].toLowerCase()}.`,
+                                );
+                              }
+                            }}
+                          />
+                        ))}
+                      {!orders.some(
+                        (order) => statusKey(order.status) === status,
+                      ) && (
+                        <div className="adm-empty-column">
+                          <Icon
+                            name={status === "Completed" ? "check" : "coffee"}
+                            size={25}
+                          />
+                          <p>
+                            {status === "Pending"
+                              ? "Ready for the next good thing."
+                              : `No ${statusLabels[status].toLowerCase()} orders yet.`}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </section>
+                ))}
+              </div>
             </section>
           ) : (
-            <section className="adm-menu-section" aria-labelledby="adm-menu-title">
-              <div className="adm-section-heading"><div><h2 id="adm-menu-title">Your menu <span>{products.length}</span></h2><p>Little details. Delicious possibilities.</p></div></div>
-              <div className="adm-menu-toolbar"><label className="adm-search"><Icon name="search" size={18} /><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Find something on the menu…" aria-label="Search menu products" /></label><select aria-label="Filter products by category" value={category} onChange={(event) => setCategory(event.target.value)}><option>All categories</option>{categories.map((item) => <option key={item}>{item}</option>)}</select></div>
-              <div className="adm-table-scroll"><table className="adm-product-table"><thead><tr><th scope="col">Product</th><th scope="col">Category</th><th scope="col">Price</th><th scope="col">Availability</th><th scope="col"><span className="adm-sr-only">Actions</span></th></tr></thead><tbody>{visibleProducts.map((product) => <tr key={product.id}><td><div className="adm-table-product"><Image src={product.image} alt="" width={51} height={51} unoptimized /><div><strong>{product.name}</strong><p>{product.description}</p></div></div></td><td><span className="adm-category-tag">{product.category}</span></td><td className="adm-price">{money(product.price)}</td><td><button className={`adm-availability ${product.available ? "adm-available" : ""}`} aria-label={`${product.name}: ${product.available ? "available" : "unavailable"}. Toggle availability`} aria-pressed={product.available} onClick={() => { updateProduct(product.id, { available: !product.available }); setNotice(`${product.name} is now ${product.available ? "unavailable" : "available"}.`); }}><span />{product.available ? "Available" : "Sold out"}</button></td><td><div className="adm-row-actions"><button aria-label={`Edit ${product.name}`} title="Edit product" onClick={() => setEditing(product)}><Icon name="edit" size={17} /></button><button className="adm-delete-action" aria-label={`Delete ${product.name}`} title="Delete product" onClick={() => setDeleting(product)}><Icon name="trash" size={17} /></button></div></td></tr>)}</tbody></table>{!visibleProducts.length && <div className="adm-no-results"><Icon name={products.length ? "search" : "coffee"} size={32} /><h3>{products.length ? "No products found" : "Your first product starts here."}</h3><p>{products.length ? "Try another search or category." : "Add a product to make it available in the customer section."}</p>{products.length ? <button className="adm-secondary" onClick={() => { setSearch(""); setCategory("All categories"); }}>Clear filters</button> : <button className="adm-primary" onClick={() => setEditing("new")}><Icon name="plus" size={17} />Add your first product</button>}</div>}</div>
-              <div className="adm-table-footer">Showing {visibleProducts.length} of {products.length} menu items<span>Thoughtfully made. Always.</span></div>
+            <section
+              className="adm-menu-section"
+              aria-labelledby="adm-menu-title"
+            >
+              <div className="adm-section-heading">
+                <div>
+                  <h2 id="adm-menu-title">
+                    Your menu <span>{products.length}</span>
+                  </h2>
+                  <p>Little details. Delicious possibilities.</p>
+                </div>
+              </div>
+              <div className="adm-menu-toolbar">
+                <label className="adm-search">
+                  <Icon name="search" size={18} />
+                  <input
+                    type="search"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Find something on the menu…"
+                    aria-label="Search menu products"
+                  />
+                </label>
+                <select
+                  aria-label="Filter products by category"
+                  value={category}
+                  onChange={(event) => setCategory(event.target.value)}
+                >
+                  <option>All categories</option>
+                  {categories.map((item) => (
+                    <option key={item}>{item}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="adm-table-scroll">
+                <table className="adm-product-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Product</th>
+                      <th scope="col">Category</th>
+                      <th scope="col">Price</th>
+                      <th scope="col">Availability</th>
+                      <th scope="col">
+                        <span className="adm-sr-only">Actions</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleProducts.map((product) => (
+                      <tr key={product.id}>
+                        <td>
+                          <div className="adm-table-product">
+                            <Image
+                              src={product.image}
+                              alt=""
+                              width={51}
+                              height={51}
+                              unoptimized
+                            />
+                            <div>
+                              <strong>{product.name}</strong>
+                              <p>{product.description}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <span className="adm-category-tag">
+                            {product.category}
+                          </span>
+                        </td>
+                        <td className="adm-price">{money(product.price)}</td>
+                        <td>
+                          <button
+                            className={`adm-availability ${product.available ? "adm-available" : ""}`}
+                            aria-label={`${product.name}: ${product.available ? "available" : "unavailable"}. Toggle availability`}
+                            aria-pressed={product.available}
+                            onClick={() => {
+                              updateProduct(product.id, {
+                                available: !product.available,
+                              });
+                              setNotice(
+                                `${product.name} is now ${product.available ? "unavailable" : "available"}.`,
+                              );
+                            }}
+                          >
+                            <span />
+                            {product.available ? "Available" : "Sold out"}
+                          </button>
+                        </td>
+                        <td>
+                          <div className="adm-row-actions">
+                            <button
+                              aria-label={`Edit ${product.name}`}
+                              title="Edit product"
+                              onClick={() => setEditing(product)}
+                            >
+                              <Icon name="edit" size={17} />
+                            </button>
+                            <button
+                              className="adm-delete-action"
+                              aria-label={`Delete ${product.name}`}
+                              title="Delete product"
+                              onClick={() => setDeleting(product)}
+                            >
+                              <Icon name="trash" size={17} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {!visibleProducts.length && (
+                  <div className="adm-no-results">
+                    <Icon
+                      name={products.length ? "search" : "coffee"}
+                      size={32}
+                    />
+                    <h3>
+                      {products.length
+                        ? "No products found"
+                        : "Your first product starts here."}
+                    </h3>
+                    <p>
+                      {products.length
+                        ? "Try another search or category."
+                        : "Add a product to make it available in the customer section."}
+                    </p>
+                    {products.length ? (
+                      <button
+                        className="adm-secondary"
+                        onClick={() => {
+                          setSearch("");
+                          setCategory("All categories");
+                        }}
+                      >
+                        Clear filters
+                      </button>
+                    ) : (
+                      <button
+                        className="adm-primary"
+                        onClick={() => setEditing("new")}
+                      >
+                        <Icon name="plus" size={17} />
+                        Add your first product
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="adm-table-footer">
+                Showing {visibleProducts.length} of {products.length} menu items
+                <span>Thoughtfully made. Always.</span>
+              </div>
             </section>
           )}
-          <footer className="adm-footer"><span>© 2026 Pine & Pour</span><span>Good coffee. Good company. Good days.</span></footer>
+          <footer className="adm-footer">
+            <span>© 2026 Pine & Pour</span>
+            <span>Good coffee. Good company. Good days.</span>
+          </footer>
         </main>
       </div>
-      {editing && <ProductEditor product={editing === "new" ? null : editing} fallbackImage="/images/product-placeholder.svg" onClose={() => setEditing(null)} onSave={saveProduct} />}
-      {deleting && <Modal title="Take this off the menu?" onClose={() => setDeleting(null)} className="adm-confirm-modal"><p className="adm-modal-copy"><strong>{deleting.name}</strong> will be removed from your menu. Existing orders will keep their original item details.</p><div className="adm-form-actions"><button className="adm-secondary" onClick={() => setDeleting(null)}>Keep product</button><button className="adm-danger" onClick={() => { deleteProduct(deleting.id); setNotice(`${deleting.name} removed from the menu.`); setDeleting(null); }}>Remove product</button></div></Modal>}
+      {editing && (
+        <ProductEditor
+          product={editing === "new" ? null : editing}
+          fallbackImage="/images/product-placeholder.svg"
+          onClose={() => setEditing(null)}
+          onSave={saveProduct}
+        />
+      )}
+      {deleting && (
+        <Modal
+          title="Take this off the menu?"
+          onClose={() => setDeleting(null)}
+          className="adm-confirm-modal"
+        >
+          <p className="adm-modal-copy">
+            <strong>{deleting.name}</strong> will be removed from your menu.
+            Existing orders will keep their original item details.
+          </p>
+          <div className="adm-form-actions">
+            <button className="adm-secondary" onClick={() => setDeleting(null)}>
+              Keep product
+            </button>
+            <button
+              className="adm-danger"
+              onClick={() => {
+                deleteProduct(deleting.id);
+                setNotice(`${deleting.name} removed from the menu.`);
+                setDeleting(null);
+              }}
+            >
+              Remove product
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
 
-function Stat({ label, value, caption, icon }: { label: string; value: string; caption: string; icon: string }) {
-  return <div className="adm-stat"><div className="adm-stat-top"><span>{label}</span><span className="adm-stat-icon"><Icon name={icon} size={19} /></span></div><strong>{value}</strong><p>{caption}</p></div>;
+function Stat({
+  label,
+  value,
+  caption,
+  icon,
+}: {
+  label: string;
+  value: string;
+  caption: string;
+  icon: string;
+}) {
+  return (
+    <div className="adm-stat">
+      <div className="adm-stat-top">
+        <span>{label}</span>
+        <span className="adm-stat-icon">
+          <Icon name={icon} size={19} />
+        </span>
+      </div>
+      <strong>{value}</strong>
+      <p>{caption}</p>
+    </div>
+  );
 }
 
-function OrderCard({ order, onAdvance }: { order: Order; onAdvance: () => void }) {
-  const time = new Date(order.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Singapore" });
-  return <article className="adm-order-card"><div className="adm-ticket-top"><strong>#{order.id.replace(/^#/, "")}</strong><span>{time}</span></div><div className="adm-ticket-customer"><h4>{order.customer}</h4><span className={`adm-fulfillment adm-fulfillment-${order.fulfillment}`}>{order.fulfillment === "pickup" ? "Pickup" : "Delivery"}</span></div><ul className="adm-ticket-items">{order.items.map((item) => <li key={item.product.id}><span>{item.quantity}×</span>{item.product.name}</li>)}</ul>{order.notes && <p className="adm-order-note">{order.notes}</p>}{order.fulfillment === "delivery" && order.address && <p className="adm-order-address">Deliver to: {order.address}</p>}<div className="adm-ticket-total"><span>{order.items.reduce((total, item) => total + item.quantity, 0)} items</span><strong>{money(order.total)}</strong></div><button className="adm-order-advance" onClick={onAdvance} disabled={order.status === "Completed"}>{nextLabels[order.status]}<Icon name={order.status === "Completed" ? "check" : "arrow-right"} size={15} /></button></article>;
+function OrderCard({
+  order,
+  onAdvance,
+}: {
+  order: Order;
+  onAdvance: () => void;
+}) {
+  const time = new Date(order.createdAt).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "Asia/Singapore",
+  });
+  const status = statusKey(order.status);
+  return (
+    <article className="adm-order-card">
+      <div className="adm-ticket-top">
+        <strong>#{order.id.replace(/^#/, "")}</strong>
+        <span>{time}</span>
+      </div>
+      <div className="adm-ticket-customer">
+        <h4>{order.customer}</h4>
+        <span
+          className={`adm-fulfillment adm-fulfillment-${order.fulfillment}`}
+        >
+          {order.fulfillment === "pickup" ? "Pickup" : "Delivery"}
+        </span>
+      </div>
+      <ul className="adm-ticket-items">
+        {order.items.map((item) => (
+          <li key={item.product.id}>
+            <span>{item.quantity}×</span>
+            {item.product.name}
+          </li>
+        ))}
+      </ul>
+      {order.notes && <p className="adm-order-note">{order.notes}</p>}
+      {String(order.fulfillment) === "delivery" && order.address && (
+        <p className="adm-order-address">Deliver to: {order.address}</p>
+      )}
+      <div className="adm-ticket-total">
+        <span>
+          {order.items.reduce((total, item) => total + item.quantity, 0)} items
+        </span>
+        <strong>{money(order.total)}</strong>
+      </div>
+      <button
+        className="adm-order-advance"
+        onClick={onAdvance}
+        disabled={status === "Completed"}
+      >
+        {nextLabels[status]}
+        <Icon
+          name={status === "Completed" ? "check" : "arrow-right"}
+          size={15}
+        />
+      </button>
+    </article>
+  );
 }
 
-function ProductEditor({ product, fallbackImage, onClose, onSave }: { product: Product | null; fallbackImage: string; onClose: () => void; onSave: (value: Omit<Product, "id">) => void }) {
+function ProductEditor({
+  product,
+  fallbackImage,
+  onClose,
+  onSave,
+}: {
+  product: Product | null;
+  fallbackImage: string;
+  onClose: () => void;
+  onSave: (value: Omit<Product, "id">) => void;
+}) {
   const [image, setImage] = useState(product?.image || "");
   const [imageError, setImageError] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -102,21 +621,170 @@ function ProductEditor({ product, fallbackImage, onClose, onSave }: { product: P
     const description = String(form.get("description") || "").trim();
     const price = Number(form.get("price"));
     if (!name || !description || !Number.isFinite(price) || price <= 0) return;
-    onSave({ name, description, price, category: String(form.get("category")) as Product["category"], image: image || fallbackImage, available: form.get("available") === "on", ...(product?.badge ? { badge: product.badge } : {}) });
+    onSave({
+      name,
+      description,
+      price,
+      category: String(form.get("category")) as Product["category"],
+      image: image || fallbackImage,
+      available: form.get("available") === "on",
+      ...(product?.badge ? { badge: product.badge } : {}),
+    });
   }
 
   function upload(file: File | undefined) {
     if (!file) return;
-    if (!file.type.startsWith("image/")) { setImageError("Please choose an image file."); return; }
-    if (file.size > 1024 * 1024) { setImageError("Choose an image smaller than 1 MB."); return; }
+    if (!file.type.startsWith("image/")) {
+      setImageError("Please choose an image file.");
+      return;
+    }
+    if (file.size > 1024 * 1024) {
+      setImageError("Choose an image smaller than 1 MB.");
+      return;
+    }
     setImageError("");
     setUploading(true);
     const reader = new FileReader();
-    reader.onload = () => { setImage(String(reader.result)); setUploading(false); };
-    reader.onerror = () => { setImageError("We couldn’t read that image. Please try another."); setUploading(false); };
+    reader.onload = () => {
+      setImage(String(reader.result));
+      setUploading(false);
+    };
+    reader.onerror = () => {
+      setImageError("We couldn’t read that image. Please try another.");
+      setUploading(false);
+    };
     reader.readAsDataURL(file);
   }
 
-  return <Modal title={product ? "A little menu refresh." : "Something new is brewing."} onClose={onClose} className="adm-product-modal"><p className="adm-modal-copy">{product ? "Make this favorite even better." : "Add your next customer favorite to the menu."}</p><form className="adm-product-form" onSubmit={submit}><div className="adm-upload-area">{image ? <><Image src={image} alt="Product image preview" width={73} height={73} unoptimized /><div><strong>Looking delicious.</strong><button type="button" onClick={() => fileRef.current?.click()}>Choose another photo</button></div></> : <><span><Icon name="upload" size={23} /></span><div><strong>Add a product photo</strong><p>JPG, PNG or WebP · Up to 1 MB</p><button type="button" onClick={() => fileRef.current?.click()}>Choose image</button></div></>}<input ref={fileRef} type="file" accept="image/*" aria-label="Upload product image" onChange={(event) => upload(event.target.files?.[0])} /></div>{imageError && <p className="adm-field-error" role="alert">{imageError}</p>}<label htmlFor="product-name">Item name<input id="product-name" name="name" defaultValue={product?.name} placeholder="e.g. Honey cinnamon latte" maxLength={70} required /></label><div className="adm-form-two"><label htmlFor="product-category">Category<select id="product-category" name="category" defaultValue={product?.category || "Coffee"}>{categories.map((category) => <option key={category}>{category}</option>)}</select></label><label htmlFor="product-price">Price ($)<input id="product-price" name="price" type="number" min="0.01" max="9999" step="0.01" defaultValue={product?.price} placeholder="0.00" required /></label></div><label htmlFor="product-description">Description<textarea id="product-description" name="description" defaultValue={product?.description} placeholder="A few delicious details…" maxLength={240} rows={3} required /></label><label className="adm-checkbox"><input name="available" type="checkbox" defaultChecked={product?.available ?? true} /><span>Available for customers to order</span></label><div className="adm-form-actions"><button type="button" className="adm-secondary" onClick={onClose}>Cancel</button><button className="adm-primary" type="submit" disabled={uploading}><Icon name={product ? "check" : "plus"} size={17} />{uploading ? "Reading image…" : product ? "Save changes" : "Add to menu"}</button></div></form></Modal>;
+  return (
+    <Modal
+      title={product ? "A little menu refresh." : "Something new is brewing."}
+      onClose={onClose}
+      className="adm-product-modal"
+    >
+      <p className="adm-modal-copy">
+        {product
+          ? "Make this favorite even better."
+          : "Add your next customer favorite to the menu."}
+      </p>
+      <form className="adm-product-form" onSubmit={submit}>
+        <div className="adm-upload-area">
+          {image ? (
+            <>
+              <Image
+                src={image}
+                alt="Product image preview"
+                width={73}
+                height={73}
+                unoptimized
+              />
+              <div>
+                <strong>Looking delicious.</strong>
+                <button type="button" onClick={() => fileRef.current?.click()}>
+                  Choose another photo
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <span>
+                <Icon name="upload" size={23} />
+              </span>
+              <div>
+                <strong>Add a product photo</strong>
+                <p>JPG, PNG or WebP · Up to 1 MB</p>
+                <button type="button" onClick={() => fileRef.current?.click()}>
+                  Choose image
+                </button>
+              </div>
+            </>
+          )}
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            aria-label="Upload product image"
+            onChange={(event) => upload(event.target.files?.[0])}
+          />
+        </div>
+        {imageError && (
+          <p className="adm-field-error" role="alert">
+            {imageError}
+          </p>
+        )}
+        <label htmlFor="product-name">
+          Item name
+          <input
+            id="product-name"
+            name="name"
+            defaultValue={product?.name}
+            placeholder="e.g. Honey cinnamon latte"
+            maxLength={70}
+            required
+          />
+        </label>
+        <div className="adm-form-two">
+          <label htmlFor="product-category">
+            Category
+            <select
+              id="product-category"
+              name="category"
+              defaultValue={product?.category || "Coffee"}
+            >
+              {categories.map((category) => (
+                <option key={category}>{category}</option>
+              ))}
+            </select>
+          </label>
+          <label htmlFor="product-price">
+            Price ($)
+            <input
+              id="product-price"
+              name="price"
+              type="number"
+              min="0.01"
+              max="9999"
+              step="0.01"
+              defaultValue={product?.price}
+              placeholder="0.00"
+              required
+            />
+          </label>
+        </div>
+        <label htmlFor="product-description">
+          Description
+          <textarea
+            id="product-description"
+            name="description"
+            defaultValue={product?.description}
+            placeholder="A few delicious details…"
+            maxLength={240}
+            rows={3}
+            required
+          />
+        </label>
+        <label className="adm-checkbox">
+          <input
+            name="available"
+            type="checkbox"
+            defaultChecked={product?.available ?? true}
+          />
+          <span>Available for customers to order</span>
+        </label>
+        <div className="adm-form-actions">
+          <button type="button" className="adm-secondary" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="adm-primary" type="submit" disabled={uploading}>
+            <Icon name={product ? "check" : "plus"} size={17} />
+            {uploading
+              ? "Reading image…"
+              : product
+                ? "Save changes"
+                : "Add to menu"}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
 }
-

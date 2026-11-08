@@ -69,9 +69,9 @@ export function CafeProvider({ children }: { children: ReactNode }) {
       const product = data.products.find(p => p.id === item.productId && p.available);
       return product ? [{ product: { ...product }, quantity: item.quantity }] : [];
     });
-    if (!items.length) throw new Error("Your bag is empty. Add a favorite before placing an order.");
-    const total = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0) + (details.fulfillment === "delivery" ? 3.5 : 0);
-    const order: Order = { ...details, id, items, total, status: "Pending", createdAt: new Date().toISOString() };
+    if (!items.length) throw new Error("Таны сагс хоосон байна.");
+    const total = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+    const order: Order = { ...details, id, items, total, status: "Хүлээгдэж байна...", createdAt: new Date().toISOString() };
     setData(prev => ({ ...prev, orders: [order, ...prev.orders], cart: [] }));
     return id;
   };

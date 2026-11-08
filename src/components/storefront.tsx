@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import React from "react";
-import { Coffee, MoveRight } from "lucide-react";
+import { Coffee } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { useCafe } from "./cafe-provider";
@@ -22,11 +21,14 @@ export function Brand({ light = false }: { light?: boolean }) {
     <Link
       href="/"
       className={`brand ${light ? "brand-light" : ""}`}
-      aria-label="Pinecone-cafe"
+      aria-label="Pinecone cafe — home"
     >
-      <span className="brand-name">
-        {" "}
-        Pinecone cafe <Icon name=""></Icon>{" "}
+      <span className="brand-symbol" aria-hidden="true">
+        <Coffee size={24} strokeWidth={1.5} />
+      </span>
+      <span className="brand-wordmark">
+        <span className="brand-name">Pinecone cafe</span>
+        <span className="brand-tagline">COFFEE & GOOD COMPANY</span>
       </span>
     </Link>
   );
@@ -83,7 +85,7 @@ export default function Storefront() {
   const closeDialog = () => setDialog(null);
 
   return (
-    <>
+    <div className="storefront">
       <a className="skip-link" href="#menu">
         Меню үзэх
       </a>
@@ -109,7 +111,7 @@ export default function Storefront() {
             <a className="nav-active" href="#menu">
               Меню
             </a>
-            <a href="#story">Our story</a>
+
             <a href="#reviews">Сэтгэгдэл үлдээх</a>
           </nav>
           <div className="header-actions">
@@ -130,6 +132,7 @@ export default function Storefront() {
               className="mobile-menu-button icon-button"
               aria-expanded={mobileMenu}
               aria-label="Toggle navigation"
+              aria-controls="mobile-navigation"
               onClick={() => setMobileMenu(!mobileMenu)}
             >
               <Icon name={mobileMenu ? "close" : "menu"} />
@@ -137,7 +140,7 @@ export default function Storefront() {
           </div>
         </div>
         {mobileMenu && (
-          <nav className="mobile-nav" aria-label="Mobile navigation">
+          <nav id="mobile-navigation" className="mobile-nav" aria-label="Mobile navigation">
             <a href="#menu" onClick={() => setMobileMenu(false)}>
               Меню
             </a>
@@ -161,8 +164,7 @@ export default function Storefront() {
         <section className="hero container" aria-labelledby="hero-title">
           <div className="hero-copy">
             <div className="eyebrow">
-              <span className="eyebrow-line" /> Кофе уух <MoveRight /> npm
-              install magic
+              <span className="eyebrow-line" /> A LITTLE COFFEE. A LITTLE MAGIC.
             </div>
             <h1 id="hero-title">
               Build success,
@@ -170,46 +172,50 @@ export default function Storefront() {
               have <em>some rest.</em>
             </h1>
             <p>
-              When your brain hits 404 Not Found:
-              <br className="desktop-break" /> Grab a sweet treat and Restart.
+              When your brain hits 404 Not Found,
+              <br className="desktop-break" /> grab a sweet treat and restart.
             </p>
             <div className="hero-actions">
               <a className="button button-primary" href="#menu">
                 Өнөөдөр юу уух уу? <Icon name="arrow-right" size={18} />
               </a>
-              <span>5-10 минутын дотор бэлэн болно.</span>
+              <span className="pickup-note"><Icon name="clock" size={17} /> 5–10 минутын дотор бэлэн</span>
             </div>
             {reviews.length > 0 ? (
               <div className="hero-social-proof">
-                <div className="avatar-stack" aria-hidden="true">
-                  <span>AM</span>
-                  <span>JL</span>
-                  <span>SK</span>
-                  <span>OT</span>
-                </div>
+                <span className="hero-rating">{average.toFixed(1)}</span>
                 <div>
                   <Stars rating={average} />
                   <p>
-                    <span>Good coffee.</span>
+                    <span>{reviews.length} сэтгэгдэл · Made better by you.</span>
                   </p>
                 </div>
               </div>
             ) : (
               <div className="hero-community">
                 <Icon name="heart" size={17} />
-                <span>Good coffee.</span>
+                <span>Good coffee. Fresh ideas. Your kind of break.</span>
               </div>
             )}
           </div>
           <div className="hero-visual">
             <Image
               src="/images/herojpg.jpg"
-              alt="Freshly brewed coffee and a golden croissant on a warm café table"
+              alt="A freshly poured latte with leaf-shaped coffee art on a wooden café table"
               fill
               priority
-              sizes="(max-width: 700px) 100vw, 53vw"
+              sizes="(max-width: 760px) 100vw, 50vw"
               className="hero-photo"
             />
+            <div className="hero-photo-shade" />
+            <span className="hero-code"><span /> npm install magic</span>
+            <div className="hero-image-caption">
+              <span>YOUR DAILY MOMENT OF JOY</span>
+              <strong>A good day is brewing.</strong>
+              <a href="#menu" className="hero-caption-arrow" aria-label="Explore the menu">
+                <Icon name="arrow-up-right" size={22} />
+              </a>
+            </div>
           </div>
         </section>
 
@@ -220,14 +226,13 @@ export default function Storefront() {
         >
           <div className="section-heading">
             <div>
-              <div className="eyebrow">
-                Хэцүү даалгавар бүрийн ард шинэ амжилт байдаг шүү. - You can do
-                it.
-              </div>
+              <div className="eyebrow">THE GOOD STUFF</div>
               <h2 id="menu-title">
                 Өнөөдөр <em>юу уух уу?</em>
               </h2>
+              <p>Дуртай кофегоо сонгоод, өөртөө бяцхан завсарлага бэлэглээрэй.</p>
             </div>
+            <span className="menu-heading-note"><Icon name="coffee" size={22} /> Brewed for your next big idea.</span>
           </div>
           {products.length > 0 && (
             <div className="menu-toolbar">
@@ -385,14 +390,15 @@ export default function Storefront() {
           </button>
         </section>
 
-        <section id="reviews" className="reviews-section">
+        <section id="reviews" className="reviews-section" aria-labelledby="reviews-title">
           <div className="container">
             <div className="section-heading">
               <div>
-                <div className="eyebrow">ТА САНАЛ ХҮСЭЛТ БОЛОН</div>
-                <h2>
-                  ХЭН НЭГЭНД <em>САЙХАН ҮГ ҮЛДЭЭГЭЭРЭЙ.</em>
+                <div className="eyebrow">A LITTLE LOVE FROM OUR COMMUNITY</div>
+                <h2 id="reviews-title">
+                  Таны үгс, <em>бидний урам.</em>
                 </h2>
+                <p>Санал хүсэлтээ хуваалцаад, хэн нэгэнд сайхан үг үлдээгээрэй.</p>
                 <div className="review-summary">
                   {reviews.length ? (
                     <>
@@ -417,7 +423,7 @@ export default function Storefront() {
                 <Icon name="heart" size={27} />
                 <div>
                   <h3>Your kind words belong here.</h3>
-                  <p>Be the first to share your Pinecone & Pour moment.</p>
+                  <p>Be the first to share your Pinecone cafe moment.</p>
                 </div>
               </div>
             )}
@@ -503,7 +509,7 @@ export default function Storefront() {
             </div>
           </div>
           <div className="footer-bottom">
-            <span>© 2026 Pinecone & Pourcafe. Made with care.</span>
+            <span>© 2026 Pinecone cafe. Made with care.</span>
             <span>Small batch. Big heart. Always.</span>
           </div>
         </div>
@@ -545,6 +551,6 @@ export default function Storefront() {
         <OrderTracker orderId={orderId} onClose={closeDialog} />
       )}
       {dialog === "review" && <ReviewDialog onClose={closeDialog} />}
-    </>
+    </div>
   );
 }

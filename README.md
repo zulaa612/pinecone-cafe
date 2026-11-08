@@ -13,7 +13,7 @@ Open http://localhost:3000. For production, run `npm run build` then `npm start`
 
 ## Customer section — `/`
 
-Customers can browse and search admin-created products, manage their bag, check out for pickup or delivery, track orders, and leave reviews. The catalog starts empty; products appear after an admin adds them. No sample products, orders, or reviews are created.
+Customers can browse and search admin-created products, manage their bag, check out for café pickup, track orders, and leave reviews. The catalog starts empty; products appear after an admin adds them. No sample products, orders, or reviews are created.
 
 ## Admin section — `/admin`
 
