@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "../components/order-dialogs.css";
 @import "../components/admin.css";
+@import "../components/auth.css";
 /* Self-hosted Latin fonts from Google Fonts. See adjacent license files. */
 @font-face {
   font-family: "DM Sans";

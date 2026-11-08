@@ -15,7 +15,7 @@ async function StaffArea() {
   if (!user) return <StaffSignIn />;
   // Signed in but not an admin: send them back to the storefront.
   if (user.role !== "admin") redirect("/");
-  return <AdminDashboard demo />;
+  return <AdminDashboard demo={false} />;
 }
 
 export default function AdminPage() {

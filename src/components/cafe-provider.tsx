@@ -1,87 +1,130 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { initialProducts, initialReviews, initialOrders, type Product, type Order, type Review, type CartItem, type OrderDetails, type OrderStatus } from "@/lib/cafe";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import * as actions from "@/app/actions/cafe";
+import type { ActionResult, AppUser, CafeState, CartItem, Order, OrderStatus, Product, Review } from "@/lib/cafe";
+import { toCents } from "@/lib/cafe";
+import { computePricing } from "@/lib/pricing";
 
-type CafeData = { products: Product[]; orders: Order[]; reviews: Review[]; cart: CartItem[] };
-type CafeContextValue = CafeData & {
-  cartCount: number; cartTotal: number; addToCart: (id: string) => void;
+export type ProductInput = Pick<Product, "name" | "description" | "price" | "category" | "image" | "available" | "featured">;
+type LoadStatus = "loading" | "ready" | "error";
+
+type CafeContextValue = {
+  user: AppUser | null; products: Product[]; orders: Order[]; reviews: Review[]; cart: CartItem[];
+  status: LoadStatus; refresh: () => Promise<void>;
+  cartCount: number; cartTotal: number;
+  /** Preview only. The server recomputes every price and discount when the order is placed. */
+  pricing: { subtotal: number; discount: number; total: number };
+  addToCart: (id: string) => void;
   setCartQuantity: (id: string, quantity: number) => void;
-  placeOrder: (details: OrderDetails) => string;
-  addReview: (review: Omit<Review, "id" | "date">) => void;
-  addProduct: (product: Omit<Product, "id">) => void;
-  updateProduct: (id: string, product: Partial<Product>) => void;
-  deleteProduct: (id: string) => void;
-  updateOrderStatus: (id: string, status: OrderStatus) => void;
+  placeOrder: (details: { customerName: string; classGrade?: string; location?: string }) => Promise<ActionResult<{ id: string }>>;
+  addReview: (review: { productId: string; rating: number; comment: string }) => Promise<ActionResult>;
+  addProduct: (product: ProductInput) => Promise<ActionResult>;
+  updateProduct: (id: string, product: ProductInput) => Promise<ActionResult>;
+  deleteProduct: (id: string) => Promise<ActionResult>;
+  updateOrderStatus: (id: string, status: OrderStatus) => Promise<ActionResult>;
+  deleteReview: (id: string) => Promise<ActionResult>;
 };
-const initialData: CafeData = { products: initialProducts, orders: initialOrders, reviews: initialReviews, cart: [] };
-const storageKey = "pine-and-pour-v2";
+
+const CART_KEY = "pine-and-pour-cart";
+const LEGACY_KEYS = ["pine-and-pour-v1", "pine-and-pour-v2"];
+const POLL_MS = 20_000;
+const emptyState: CafeState = { user: null, products: [], orders: [], reviews: [] };
 const CafeContext = createContext<CafeContextValue | null>(null);
 
 export function CafeProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<CafeData>(initialData);
-  const [loaded, setLoaded] = useState(false);
+  const [state, setState] = useState<CafeState>(emptyState);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [status, setStatus] = useState<LoadStatus>("loading");
+  const [cartLoaded, setCartLoaded] = useState(false);
+
+  const refresh = useCallback(async () => {
+    try {
+      const response = await fetch("/api/state", { cache: "no-store" });
+      if (!response.ok) throw new Error(String(response.status));
+      setState(await response.json());
+      setStatus("ready");
+    } catch {
+      // Keep showing the last good data; only flag an error if we never loaded anything.
+      setStatus(current => (current === "ready" ? current : "error"));
+    }
+  }, []);
+
+  // Server data: initial load, refresh on focus, and light polling while the tab is visible.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void refresh();
+    const onFocus = () => document.visibilityState === "visible" && void refresh();
+    const timer = setInterval(onFocus, POLL_MS);
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => { clearInterval(timer); window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onFocus); };
+  }, [refresh]);
+
+  // Cart: the only client-side persistence. Legacy localStorage data from the prototype is discarded.
   useEffect(() => {
     try {
-      const current = localStorage.getItem(storageKey);
-      const saved = current ?? localStorage.getItem("pine-and-pour-v1");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed.products) && Array.isArray(parsed.orders) && Array.isArray(parsed.reviews) && Array.isArray(parsed.cart)) {
-          if (!current) {
-            // Remove the earlier preview's sample records, preserving admin-created data.
-            parsed.products = parsed.products.filter((p: Product) => !/^p[1-8]$/.test(p.id));
-            parsed.orders = parsed.orders.filter((o: Order) => !["PP-1040", "PP-1041", "PP-1042"].includes(o.id));
-            parsed.reviews = parsed.reviews.filter((r: Review) => !/^r[1-3]$/.test(r.id));
-            parsed.cart = parsed.cart.filter((item: CartItem) => parsed.products.some((p: Product) => p.id === item.productId));
-          }
-          setData(parsed);
-        }
+      LEGACY_KEYS.forEach(key => localStorage.removeItem(key));
+      const saved = JSON.parse(localStorage.getItem(CART_KEY) ?? "[]");
+      if (Array.isArray(saved)) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate cart from localStorage after mount
+        setCart(saved.filter((i): i is CartItem => typeof i?.productId === "string" && Number.isInteger(i.quantity) && i.quantity > 0).map(i => ({ ...i, quantity: Math.min(99, i.quantity) })));
       }
-    } catch { /* Storage is optional; the session still works without it. */ }
-    setLoaded(true);
+    } catch { /* Storage is optional. */ }
+    setCartLoaded(true);
     const sync = (event: StorageEvent) => {
-      if (event.key !== storageKey || !event.newValue) return;
-      try {
-        const parsed = JSON.parse(event.newValue);
-        if (Array.isArray(parsed.products) && Array.isArray(parsed.orders) && Array.isArray(parsed.reviews) && Array.isArray(parsed.cart)) setData(parsed);
-      } catch { /* Ignore malformed storage from another tab. */ }
+      if (event.key !== CART_KEY || !event.newValue) return;
+      try { const parsed = JSON.parse(event.newValue); if (Array.isArray(parsed)) setCart(parsed); } catch { /* ignore */ }
     };
     window.addEventListener("storage", sync);
     return () => window.removeEventListener("storage", sync);
   }, []);
   useEffect(() => {
-    if (loaded) {
-      try { localStorage.setItem(storageKey, JSON.stringify(data)); } catch { /* Private browsing or storage quota may prevent persistence. */ }
-    }
-  }, [data, loaded]);
-  const cartTotal = data.cart.reduce((sum, item) => sum + (data.products.find(p => p.id === item.productId)?.price ?? 0) * item.quantity, 0);
-  const cartCount = data.cart.reduce((sum, item) => sum + item.quantity, 0);
-  const setCartQuantity = (id: string, quantity: number) => setData(prev => ({ ...prev, cart: quantity <= 0 ? prev.cart.filter(item => item.productId !== id) : prev.cart.map(item => item.productId === id ? { ...item, quantity: Math.min(99, quantity) } : item) }));
-  const addToCart = (id: string) => setData(prev => {
-    if (!prev.products.find(p => p.id === id)?.available) return prev;
-    const found = prev.cart.find(item => item.productId === id);
-    return { ...prev, cart: found ? prev.cart.map(item => item.productId === id ? { ...item, quantity: Math.min(99, item.quantity + 1) } : item) : [...prev.cart, { productId: id, quantity: 1 }] };
+    if (cartLoaded) try { localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch { /* quota/private mode */ }
+  }, [cart, cartLoaded]);
+
+  // Drop cart lines for products that were deleted, once real data has loaded.
+  const liveCart = useMemo(
+    () => (status === "ready" ? cart.filter(item => state.products.some(p => p.id === item.productId)) : cart),
+    [cart, state.products, status],
+  );
+
+  const subtotalCents = liveCart.reduce((sum, item) => sum + toCents(state.products.find(p => p.id === item.productId)?.price ?? 0) * item.quantity, 0);
+  const priced = computePricing(subtotalCents, state.user?.customerType ?? "student");
+  const pricing = { subtotal: priced.subtotalCents / 100, discount: priced.discountCents / 100, total: priced.totalCents / 100 };
+  const cartCount = liveCart.reduce((sum, item) => sum + item.quantity, 0);
+
+  const setCartQuantity = (id: string, quantity: number) => setCart(prev => quantity <= 0 ? prev.filter(i => i.productId !== id) : prev.map(i => i.productId === id ? { ...i, quantity: Math.min(99, quantity) } : i));
+  const addToCart = (id: string) => setCart(prev => {
+    if (!state.products.find(p => p.id === id)?.available) return prev;
+    const found = prev.find(i => i.productId === id);
+    return found ? prev.map(i => i.productId === id ? { ...i, quantity: Math.min(99, i.quantity + 1) } : i) : [...prev, { productId: id, quantity: 1 }];
   });
-  const placeOrder = (details: OrderDetails) => {
-    const id = `PP-${Date.now().toString().slice(-6)}`;
-    const items = data.cart.flatMap(item => {
-      const product = data.products.find(p => p.id === item.productId && p.available);
-      return product ? [{ product: { ...product }, quantity: item.quantity }] : [];
-    });
-    if (!items.length) throw new Error("Таны сагс хоосон байна.");
-    const total = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-    const order: Order = { ...details, id, items, total, status: "Хүлээгдэж байна...", createdAt: new Date().toISOString() };
-    setData(prev => ({ ...prev, orders: [order, ...prev.orders], cart: [] }));
-    return id;
-  };
+
+  /** Runs a server action, then refreshes server data when it succeeded. */
+  async function run<T extends ActionResult<object>>(action: () => Promise<T>): Promise<T> {
+    try {
+      const result = await action();
+      if (result.ok) await refresh();
+      return result;
+    } catch {
+      return { ok: false, error: "Something went wrong. Please check your connection and try again." } as T;
+    }
+  }
+
   const value: CafeContextValue = {
-    ...data, cartTotal, cartCount, addToCart, setCartQuantity, placeOrder,
-    addReview: review => setData(prev => ({ ...prev, reviews: [{ ...review, id: crypto.randomUUID(), date: new Date().toISOString() }, ...prev.reviews] })),
-    addProduct: product => setData(prev => ({ ...prev, products: [...prev.products, { ...product, id: crypto.randomUUID() }] })),
-    updateProduct: (id, product) => setData(prev => ({ ...prev, products: prev.products.map(p => p.id === id ? { ...p, ...product } : p) })),
-    deleteProduct: id => setData(prev => ({ ...prev, products: prev.products.filter(p => p.id !== id), cart: prev.cart.filter(item => item.productId !== id) })),
-    updateOrderStatus: (id, status) => setData(prev => ({ ...prev, orders: prev.orders.map(order => order.id === id ? { ...order, status } : order) })),
+    ...state, cart: liveCart, status, refresh, cartCount, cartTotal: pricing.subtotal, pricing, addToCart, setCartQuantity,
+    placeOrder: async details => {
+      const result = await run(() => actions.placeOrder({ ...details, items: liveCart }));
+      if (result.ok) setCart([]);
+      return result;
+    },
+    addReview: review => run(() => actions.submitReview(review)),
+    addProduct: product => run(() => actions.createProduct(product)),
+    updateProduct: (id, product) => run(() => actions.updateProduct(id, product)),
+    deleteProduct: id => run(() => actions.deleteProduct(id)),
+    updateOrderStatus: (id, orderStatus) => run(() => actions.updateOrderStatus({ id, status: orderStatus })),
+    deleteReview: id => run(() => actions.deleteReview(id)),
   };
   return <CafeContext.Provider value={value}>{children}</CafeContext.Provider>;
 }

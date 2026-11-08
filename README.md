@@ -1,41 +1,39 @@
 # Pine & Pour
 
-A responsive café ordering UI built with React 19, Next.js 16, and Tailwind CSS 4, with separate customer and admin sections.
+A responsive café ordering app built with Next.js 16, React 19, Tailwind CSS 4, SQLite (Drizzle ORM) and TypeScript.
 
-## Run locally
+## Setup
 
 ```sh
 npm install
+cp .env.example .env.local     # then edit values
+npm run db:push                # create the SQLite tables
+npm run db:seed                # create/update the admin account from .env.local
 npm run dev
 ```
 
-Open http://localhost:3000. For production, run `npm run build` then `npm start`.
+Open http://localhost:3000. For production run `npm run build` then `npm start` (`SESSION_SECRET` is required).
 
-## Customer section — `/`
+### Environment variables
 
-Customers can browse and search admin-created products, manage their bag, check out for café pickup, track orders, and leave reviews. The catalog starts empty; products appear after an admin adds them. No sample products, orders, or reviews are created.
+| Name | Purpose |
+|---|---|
+| `DATABASE_URL` | SQLite file, default `file:./data/cafe.db` |
+| `SESSION_SECRET` | Signs session cookies (required in production) |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` | Admin account created by `npm run db:seed` |
 
-## Admin section — `/admin`
+## Accounts and roles
 
-The protected staff interface includes product creation, editing, image uploads, availability controls, deletion, and an order board with Pending, In Preparation, Ready, and Completed statuses. There is no public registration.
+- **Customers** register at `/register` as **Student** (standard price) or **Teacher** (automatic 50% discount).
+- **Admin** signs in at `/admin`. Admin accounts can only be created by the seed script. Signed-in non-admins are redirected to `/`.
 
-For the local demo, the access code is **pinecone**. To configure staff access, create `.env.local`:
+## Server-side rules
 
-```dotenv
-ADMIN_PASSWORD=your-own-staff-password
-ADMIN_SESSION_SECRET=a-long-random-secret
-```
+- Every mutation is a server action that re-checks the session and role and validates input with zod.
+- Order prices, the teacher discount and totals are computed on the server from database prices (`src/lib/pricing.ts`); the client only previews them.
+- Product images can be an https URL or an upload (PNG/JPG/WebP/GIF up to 1 MB, saved to `public/uploads`).
+- No payment gateway is integrated; customers pay at collection.
 
-Staff sessions use signed, eight-hour, HttpOnly cookies with SameSite=Lax and Secure enabled in production. Without a stable session secret, sessions expire when the server restarts.
+## Data
 
-## Data and prototype scope
-
-Products, orders, reviews, and the cart are saved in this browser's localStorage under `pine-and-pour-v2` and synchronized across tabs. Earlier preview sample records are removed during migration; admin-created records are preserved.
-
-Checkout creates a local demonstration order and takes no payment. Staff authentication protects the dashboard route; browser data is not a protected, shared backend. Add server-side storage, authorization, payment processing, and rate limiting before operating a real ordering service.
-
-Photography and fonts are bundled locally. Source information and font licenses are in `public/images/sources.json` and `public/fonts/`.
-
-## Validation
-
-`npm run build` includes TypeScript validation. Customer and admin interactions were also checked in headless Chrome at desktop and mobile sizes.
+Products, users, orders and reviews live in SQLite (`data/`, gitignored). The cart is the only browser-side state (`pine-and-pour-cart` in localStorage). Data from the earlier localStorage prototype is discarded automatically.

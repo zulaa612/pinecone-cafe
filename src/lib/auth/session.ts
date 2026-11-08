@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 
 const COOKIE_NAME = "pinecone_session";
 const SESSION_AGE = 60 * 60 * 24 * 7; // 7 days
@@ -20,6 +21,8 @@ function sign(value: string) {
 
 /** Returns the user id from a valid, unexpired session cookie, otherwise null. */
 export async function readSessionUserId(): Promise<string | null> {
+  // Expiry is compared with the current time, so this must run at request time, never during prerender.
+  await connection();
   const token = (await cookies()).get(COOKIE_NAME)?.value;
   if (!token) return null;
   const [payload, signature, extra] = token.split(".");

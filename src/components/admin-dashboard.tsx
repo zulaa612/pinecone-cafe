@@ -6,37 +6,31 @@ import { useRef, useState, type FormEvent } from "react";
 import { useCafe } from "@/components/cafe-provider";
 import { Icon } from "@/components/icon";
 import { Modal } from "@/components/modal";
-import { money, type Order, type Product } from "@/lib/cafe";
+import { money, type ActionResult, type Order, type OrderStatus, type Product } from "@/lib/cafe";
+import type { ProductInput } from "@/components/cafe-provider";
 import { signOutStaff } from "@/app/admin/actions";
 
 const categories: Product["category"][] = ["Coffee", "Non-Coffee", "Meal"];
-const statuses = ["Pending", "Preparing", "Ready", "Completed"] as const;
-type StatusKey = (typeof statuses)[number];
-const statusValues: Record<StatusKey, Order["status"]> = {
-  Pending: "Хүлээгдэж байна...",
-  Preparing: "Бэлдэж байна...",
-  Ready: "Бэлэн болж байна...",
-  Completed: "Амжилттай",
+const statuses = ["pending", "preparing", "ready", "completed"] as const;
+const statusLabels: Record<OrderStatus, string> = {
+  pending: "Pending",
+  preparing: "In preparation",
+  ready: "Ready to go",
+  completed: "Completed",
+  cancelled: "Cancelled",
 };
-const statusLabels = {
-  Pending: "Pending",
-  Preparing: "In preparation",
-  Ready: "Ready to go",
-  Completed: "Completed",
+const nextStatus: Partial<Record<OrderStatus, OrderStatus>> = {
+  pending: "preparing",
+  preparing: "ready",
+  ready: "completed",
 };
-const nextLabels = {
-  Pending: "Start preparing",
-  Preparing: "Mark as ready",
-  Ready: "Complete order",
-  Completed: "Completed",
+const nextLabels: Record<OrderStatus, string> = {
+  pending: "Start preparing",
+  preparing: "Mark as ready",
+  ready: "Complete order",
+  completed: "Completed",
+  cancelled: "Cancelled",
 };
-
-function statusKey(status: string): StatusKey {
-  return (
-    statuses.find((key) => key === status || statusValues[key] === status) ??
-    "Pending"
-  );
-}
 
 export function AdminDashboard({ demo }: { demo: boolean }) {
   const {
@@ -54,10 +48,10 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
   const [deleting, setDeleting] = useState<Product | null>(null);
   const [notice, setNotice] = useState("");
   const activeOrders = orders.filter(
-    (order) => statusKey(order.status) !== "Completed",
+    (order) => order.status !== "completed" && order.status !== "cancelled",
   );
   const revenue = orders
-    .filter((order) => statusKey(order.status) === "Completed")
+    .filter((order) => order.status === "completed")
     .reduce((sum, order) => sum + order.total, 0);
   const visibleProducts = products.filter(
     (product) =>
@@ -67,13 +61,22 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
         .includes(search.toLowerCase()),
   );
 
-  function saveProduct(product: Omit<Product, "id">) {
-    if (editing && editing !== "new") updateProduct(editing.id, product);
-    else addProduct(product);
-    setNotice(
-      `${product.name} ${editing === "new" ? "added to" : "updated on"} the menu.`,
-    );
-    setEditing(null);
+  async function saveProduct(product: ProductInput): Promise<ActionResult> {
+    const result =
+      editing && editing !== "new"
+        ? await updateProduct(editing.id, product)
+        : await addProduct(product);
+    if (result.ok) {
+      setNotice(
+        `${product.name} ${editing === "new" ? "added to" : "updated on"} the menu.`,
+      );
+      setEditing(null);
+    }
+    return result;
+  }
+
+  async function report(result: ActionResult, success: string) {
+    setNotice(result.ok ? success : result.error);
   }
 
   return (
@@ -217,7 +220,7 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
             <Stat
               label="Ready for collection"
               value={String(
-                orders.filter((order) => statusKey(order.status) === "Ready")
+                orders.filter((order) => order.status === "ready")
                   .length,
               ).padStart(2, "0")}
               caption="Freshly made and ready to go"
@@ -267,24 +270,23 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
                       <span className="adm-column-count">
                         {
                           orders.filter(
-                            (order) => statusKey(order.status) === status,
+                            (order) => order.status === status,
                           ).length
                         }
                       </span>
                     </div>
                     <div className="adm-order-list">
                       {orders
-                        .filter((order) => statusKey(order.status) === status)
+                        .filter((order) => order.status === status)
                         .map((order) => (
                           <OrderCard
                             key={order.id}
                             order={order}
-                            onAdvance={() => {
-                              const next =
-                                statuses[statuses.indexOf(status) + 1];
+                            onAdvance={async () => {
+                              const next = nextStatus[status];
                               if (next) {
-                                updateOrderStatus(order.id, statusValues[next]);
-                                setNotice(
+                                await report(
+                                  await updateOrderStatus(order.id, next),
                                   `Order ${order.id} moved to ${statusLabels[next].toLowerCase()}.`,
                                 );
                               }
@@ -292,15 +294,15 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
                           />
                         ))}
                       {!orders.some(
-                        (order) => statusKey(order.status) === status,
+                        (order) => order.status === status,
                       ) && (
                         <div className="adm-empty-column">
                           <Icon
-                            name={status === "Completed" ? "check" : "coffee"}
+                            name={status === "completed" ? "check" : "coffee"}
                             size={25}
                           />
                           <p>
-                            {status === "Pending"
+                            {status === "pending"
                               ? "Ready for the next good thing."
                               : `No ${statusLabels[status].toLowerCase()} orders yet.`}
                           </p>
@@ -388,11 +390,11 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
                             className={`adm-availability ${product.available ? "adm-available" : ""}`}
                             aria-label={`${product.name}: ${product.available ? "available" : "unavailable"}. Toggle availability`}
                             aria-pressed={product.available}
-                            onClick={() => {
-                              updateProduct(product.id, {
-                                available: !product.available,
-                              });
-                              setNotice(
+                            onClick={async () => {
+                              const { id, rating, reviewCount, badge, ...rest } = product;
+                              void rating; void reviewCount; void badge;
+                              await report(
+                                await updateProduct(id, { ...rest, available: !product.available }),
                                 `${product.name} is now ${product.available ? "unavailable" : "available"}.`,
                               );
                             }}
@@ -498,9 +500,11 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
             </button>
             <button
               className="adm-danger"
-              onClick={() => {
-                deleteProduct(deleting.id);
-                setNotice(`${deleting.name} removed from the menu.`);
+              onClick={async () => {
+                await report(
+                  await deleteProduct(deleting.id),
+                  `${deleting.name} removed from the menu.`,
+                );
                 setDeleting(null);
               }}
             >
@@ -550,7 +554,7 @@ function OrderCard({
     minute: "2-digit",
     timeZone: "Asia/Singapore",
   });
-  const status = statusKey(order.status);
+  const status = order.status;
   return (
     <article className="adm-order-card">
       <div className="adm-ticket-top">
@@ -558,24 +562,25 @@ function OrderCard({
         <span>{time}</span>
       </div>
       <div className="adm-ticket-customer">
-        <h4>{order.customer}</h4>
-        <span
-          className={`adm-fulfillment adm-fulfillment-${order.fulfillment}`}
-        >
-          {order.fulfillment === "pickup" ? "Pickup" : "Delivery"}
+        <h4>{order.customerName}</h4>
+        <span className={`adm-fulfillment adm-fulfillment-${order.customerType === "teacher" ? "delivery" : "pickup"}`}>
+          {order.customerType === "teacher" ? "Teacher" : "Student"}
         </span>
       </div>
       <ul className="adm-ticket-items">
-        {order.items.map((item) => (
-          <li key={item.product.id}>
+        {order.items.map((item, index) => (
+          <li key={`${item.productId}-${index}`}>
             <span>{item.quantity}×</span>
-            {item.product.name}
+            {item.name}
           </li>
         ))}
       </ul>
-      {order.notes && <p className="adm-order-note">{order.notes}</p>}
-      {String(order.fulfillment) === "delivery" && order.address && (
-        <p className="adm-order-address">Deliver to: {order.address}</p>
+      {order.classGrade && <p className="adm-order-note">Class: {order.classGrade}</p>}
+      {order.location && <p className="adm-order-address">Deliver to: {order.location}</p>}
+      {order.discount > 0 && (
+        <p className="adm-order-note">
+          {money(order.subtotal)} − 50% teacher discount ({money(order.discount)})
+        </p>
       )}
       <div className="adm-ticket-total">
         <span>
@@ -586,11 +591,11 @@ function OrderCard({
       <button
         className="adm-order-advance"
         onClick={onAdvance}
-        disabled={status === "Completed"}
+        disabled={!nextStatus[status]}
       >
         {nextLabels[status]}
         <Icon
-          name={status === "Completed" ? "check" : "arrow-right"}
+          name={!nextStatus[status] ? "check" : "arrow-right"}
           size={15}
         />
       </button>
@@ -607,29 +612,35 @@ function ProductEditor({
   product: Product | null;
   fallbackImage: string;
   onClose: () => void;
-  onSave: (value: Omit<Product, "id">) => void;
+  onSave: (value: ProductInput) => Promise<ActionResult>;
 }) {
+  const [saveError, setSaveError] = useState("");
+  const [saving, setSaving] = useState(false);
   const [image, setImage] = useState(product?.image || "");
   const [imageError, setImageError] = useState("");
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const name = String(form.get("name") || "").trim();
     const description = String(form.get("description") || "").trim();
     const price = Number(form.get("price"));
     if (!name || !description || !Number.isFinite(price) || price <= 0) return;
-    onSave({
+    setSaving(true);
+    setSaveError("");
+    const result = await onSave({
       name,
       description,
       price,
       category: String(form.get("category")) as Product["category"],
       image: image || fallbackImage,
       available: form.get("available") === "on",
-      ...(product?.badge ? { badge: product.badge } : {}),
+      featured: form.get("featured") === "on",
     });
+    setSaving(false);
+    if (!result.ok) setSaveError(result.error);
   }
 
   function upload(file: File | undefined) {
@@ -771,15 +782,30 @@ function ProductEditor({
           />
           <span>Available for customers to order</span>
         </label>
+        <label className="adm-checkbox">
+          <input
+            name="featured"
+            type="checkbox"
+            defaultChecked={product?.featured ?? false}
+          />
+          <span>Featured (shown when there are no recent bestsellers)</span>
+        </label>
+        {saveError && (
+          <p className="adm-field-error" role="alert">
+            {saveError}
+          </p>
+        )}
         <div className="adm-form-actions">
           <button type="button" className="adm-secondary" onClick={onClose}>
             Cancel
           </button>
-          <button className="adm-primary" type="submit" disabled={uploading}>
+          <button className="adm-primary" type="submit" disabled={uploading || saving}>
             <Icon name={product ? "check" : "plus"} size={17} />
             {uploading
               ? "Reading image…"
-              : product
+              : saving
+                ? "Saving…"
+                : product
                 ? "Save changes"
                 : "Add to menu"}
           </button>

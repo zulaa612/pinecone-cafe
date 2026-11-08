@@ -1,12 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { useCafe } from "@/components/cafe-provider";
 import { Icon } from "@/components/icon";
 import { Modal } from "@/components/modal";
 import { money } from "@/lib/cafe";
-
-const deliveryFee = 3.5;
 
 export function CartDrawer({
   onClose,
@@ -15,10 +14,9 @@ export function CartDrawer({
   onClose: () => void;
   onTrack: (id: string) => void;
 }) {
-  const { cart, products, setCartQuantity, cartTotal, cartCount, placeOrder } =
+  const { user, cart, products, setCartQuantity, pricing, cartCount, placeOrder } =
     useCafe();
   const [step, setStep] = useState<"cart" | "checkout" | "success">("cart");
-  const [fulfillment, setFulfillment] = useState<"pickup">("pickup");
   const [placedId, setPlacedId] = useState("");
   const [placing, setPlacing] = useState(false);
   const [formError, setFormError] = useState("");
@@ -29,40 +27,26 @@ export function CartDrawer({
     return product ? [{ product, quantity: item.quantity }] : [];
   });
   const unavailable = items.some(({ product }) => !product.available);
-  const total = cartTotal + (fulfillment === "pickup" ? deliveryFee : 0);
+  const isTeacher = user?.customerType === "teacher";
+  const canOrder = user?.role === "customer";
 
-  function submitOrder(event: FormEvent<HTMLFormElement>) {
+  async function submitOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!items.length || unavailable || placing) return;
     const fields = new FormData(event.currentTarget);
-    const address = String(fields.get("address") || "").trim();
-    if (fulfillment === "pickup" && !address) {
-      const input = event.currentTarget.elements.namedItem(
-        "address",
-      ) as HTMLTextAreaElement;
-      input.setCustomValidity("Та аль ангид суралцдаг вэ?");
-      input.reportValidity();
-      return;
-    }
     setPlacing(true);
     setFormError("");
-    try {
-      const id = placeOrder({
-        customer: String(fields.get("customer") || "").trim(),
-        email: String(fields.get("email") || "").trim(),
-        phone: String(fields.get("phone") || "").trim(),
-        fulfillment,
-        address: fulfillment === "pickup" ? address : undefined,
-        notes: String(fields.get("notes") || "").trim(),
-      });
-      setPlacedId(id);
+    const result = await placeOrder({
+      customerName: String(fields.get("customer") || "").trim(),
+      classGrade: String(fields.get("classGrade") || "").trim() || undefined,
+      location: String(fields.get("location") || "").trim() || undefined,
+    });
+    setPlacing(false);
+    if (result.ok) {
+      setPlacedId(result.id);
       setStep("success");
-    } catch (error) {
-      setFormError(
-        error instanceof Error ? error.message : "Та дахин оролдоно уу.",
-      );
-    } finally {
-      setPlacing(false);
+    } else {
+      setFormError(result.error);
     }
   }
 
@@ -90,10 +74,7 @@ export function CartDrawer({
           </p>
           <div className="ord-demo-note">
             <Icon name="info" size={17} />
-            <span>
-              This is a demo order saved in this browser. No payment has been
-              taken.
-            </span>
+            <span>No payment has been taken. Pay when you collect.</span>
           </div>
           <button
             className="ord-button ord-button-primary"
@@ -200,72 +181,55 @@ export function CartDrawer({
               className="ord-checkout-form"
               onSubmit={submitOrder}
             >
-              <fieldset className="ord-fulfillment">
-                <legend>Сэтгэгдэл үлдээх үү?</legend>
-                <label
-                  className={fulfillment === "pickup" ? "ord-selected" : ""}
-                >
-                  <input
-                    type="radio"
-                    name="fulfillment"
-                    value="pickup"
-                    checked={fulfillment === "pickup"}
-                    onChange={() => setFulfillment("pickup")}
-                  />
-                  <Icon name="bag" size={21} />
-                </label>
-                <label
-                  className={fulfillment === "pickup" ? "ord-selected" : ""}
-                >
-                  <input
-                    type="radio"
-                    name="fulfillment"
-                    value="delivery"
-                    checked={fulfillment === "pickup"}
-                    onChange={() => setFulfillment("pickup")}
-                  />
-                  <Icon name="truck" size={21} />
-                  <span>
-                    <small>To your door · {money(deliveryFee)}</small>
-                  </span>
-                </label>
-              </fieldset>
-              <div className="ord-form-heading">
-                <h3>Таны мэдээлэл</h3>
-              </div>
-              <label className="ord-field">
-                Таны нэр:
-                <input
-                  name="customer"
-                  autoComplete="name"
-                  placeholder="You can call me..."
-                  maxLength={80}
-                  required
-                  pattern=".*\S.*"
-                />
-              </label>
-              
-              <label className="ord-field">
-                Таны суралцаж буй анги:
-                <input
-                  name="phone"
-                  type="string"
-                  placeholder="class..."
-                  maxLength={30}
-                  required
-                  pattern=".*\S.*"
-                />
-              </label>
-             
-            
+              {!canOrder ? (
+                <div className="ord-signin-prompt">
+                  <h3>Sign in to place your order</h3>
+                  <p>
+                    {user
+                      ? "Staff accounts can’t place customer orders."
+                      : "Student and teacher accounts get the right details and pricing automatically."}
+                  </p>
+                  {!user && (
+                    <p>
+                      <Link href="/login">Sign in</Link> · <Link href="/register">Create an account</Link>
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <div className="ord-form-heading">
+                    <h3>Таны мэдээлэл</h3>
+                    <p>{isTeacher ? "Teacher · 50% discount applied" : "Student"}</p>
+                  </div>
+                  <label className="ord-field">
+                    Full name
+                    <input
+                      name="customer"
+                      autoComplete="name"
+                      defaultValue={user.name}
+                      maxLength={80}
+                      minLength={2}
+                      required
+                      pattern=".*\S.*"
+                    />
+                  </label>
+                  {isTeacher ? (
+                    <label className="ord-field">
+                      Current location / delivery spot
+                      <input name="location" placeholder="e.g. Room 204, staff room" maxLength={100} required pattern=".*\S.*" />
+                    </label>
+                  ) : (
+                    <label className="ord-field">
+                      Class / Grade (Анги)
+                      <input name="classGrade" placeholder="e.g. 10A" maxLength={30} required pattern=".*\S.*" />
+                    </label>
+                  )}
+                </>
+              )}
               <div className="ord-payment">
                 <Icon name="credit-card" size={20} />
                 <span>
-                  <strong>
-                    {fulfillment === "pickup"
-                      ? "Pay when you collect"
-                      : "Pay on delivery"}
-                  </strong>
+                  <strong>Pay when you collect</strong>
                   <small>No online payment is required.</small>
                 </span>
                 <Icon name="check" size={17} />
@@ -274,33 +238,18 @@ export function CartDrawer({
           )}
           <div className="ord-cart-bottom">
             <div className="ord-total-row">
-              <span>Subtotal</span>
-              <span>{money(cartTotal)}</span>
+              <span>{isTeacher ? "Original price" : "Subtotal"}</span>
+              <span>{money(pricing.subtotal)}</span>
             </div>
-            <div className="ord-total-row">
-              <span>
-                {step === "checkout"
-                  ? fulfillment === "pickup"
-                    ? "Pickup"
-                    : "Pickup"
-                  : "Pickup"}
-              </span>
-              <span>
-                {step === "checkout" && fulfillment === "pickup" ? (
-                  money(deliveryFee)
-                ) : (
-                  <span className="ord-free">On us</span>
-                )}
-              </span>
-            </div>
-            {step === "cart" && (
-              <p className="ord-delivery-hint">
-                Prefer delivery? Choose it at checkout for {money(deliveryFee)}.
-              </p>
+            {isTeacher && (
+              <div className="ord-total-row">
+                <span>Teacher discount (50%)</span>
+                <span>−{money(pricing.discount)}</span>
+              </div>
             )}
             <div className="ord-total-row ord-grand-total">
-              <span>Total</span>
-              <strong>{money(step === "checkout" ? total : cartTotal)}</strong>
+              <span>{isTeacher ? "Final price" : "Total"}</span>
+              <strong>{money(pricing.total)}</strong>
             </div>
             {unavailable && (
               <p className="ord-error" role="alert">
@@ -325,17 +274,17 @@ export function CartDrawer({
                 className="ord-button ord-button-primary"
                 type="submit"
                 form="ord-checkout-form"
-                disabled={unavailable || placing}
+                disabled={unavailable || placing || !canOrder}
               >
                 {placing
                   ? "Placing your order…"
-                  : `Place order · ${money(total)}`}{" "}
+                  : `Place order · ${money(pricing.total)}`}{" "}
                 <Icon name="arrow-right" size={18} />
               </button>
             )}
             <p className="ord-fine-print">
               {step === "checkout"
-                ? "Demo checkout · Orders are saved on this device. No real charge."
+                ? "No payment is taken online. The total is confirmed by the café."
                 : "Freshly made. Thoughtfully packed. Always delicious."}
             </p>
           </div>
@@ -346,11 +295,19 @@ export function CartDrawer({
 }
 
 const progress = [
-  { status: "Pending", label: "Received", icon: "check" },
-  { status: "Preparing", label: "Preparing", icon: "coffee" },
-  { status: "Ready", label: "Ready", icon: "bag" },
-  { status: "Completed", label: "Completed", icon: "heart" },
+  { status: "pending", label: "Received", icon: "check" },
+  { status: "preparing", label: "Preparing", icon: "coffee" },
+  { status: "ready", label: "Ready", icon: "bag" },
+  { status: "completed", label: "Completed", icon: "heart" },
 ] as const;
+
+const statusLabel = {
+  pending: "Order received",
+  preparing: "In preparation",
+  ready: "Ready",
+  completed: "Completed",
+  cancelled: "Cancelled",
+} as const;
 
 export function OrderTracker({
   orderId,
@@ -359,7 +316,7 @@ export function OrderTracker({
   orderId?: string;
   onClose: () => void;
 }) {
-  const { orders } = useCafe();
+  const { user, orders } = useCafe();
   const [query, setQuery] = useState(orderId || "");
   const [lookup, setLookup] = useState(orderId || "");
   const order = orders.find(
@@ -368,17 +325,13 @@ export function OrderTracker({
   const currentStep = progress.findIndex(
     (step) => step.status === order?.status,
   );
-  const messages = order
-    ? {
-        Pending: "You're in! Your order is with our café team.",
-        Preparing: "A little care, a little craft. We're preparing your order.",
-        Ready:
-          order.fulfillment === "pickup"
-            ? "Your order is ready. See you at the counter!"
-            : "Your order is ready for delivery.",
-        Completed: "All yours. We hope it made your day a little better.",
-      }
-    : undefined;
+  const messages = {
+    pending: "You're in! Your order is with our café team.",
+    preparing: "A little care, a little craft. We're preparing your order.",
+    ready: "Your order is ready. See you at the counter!",
+    completed: "All yours. We hope it made your day a little better.",
+    cancelled: "This order was cancelled. Please ask the café team if you have questions.",
+  };
 
   function findOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -412,8 +365,9 @@ export function OrderTracker({
         </button>
       </form>
       <p id="ord-lookup-help" className="ord-lookup-help">
-        Use the order number from your confirmation. Demo orders are available
-        on this device.
+        {user
+          ? "Use the order number from your confirmation. You can see your own orders."
+          : "Sign in to look up your orders."}
       </p>
       <div aria-live="polite">
         {lookup && !order && (
@@ -431,13 +385,9 @@ export function OrderTracker({
                 <h3>{order.id}</h3>
               </div>
               <span
-                className={`ord-status ord-status-${order.status.toLowerCase()}`}
+                className={`ord-status ord-status-${order.status}`}
               >
-                {order.status === "Хүлээгдэж байна..."
-                  ? "Order received"
-                  : order.status === "Бэлдэж байна..."
-                    ? "In preparation"
-                    : order.status}
+                {statusLabel[order.status]}
               </span>
             </div>
             <ol className="ord-progress" aria-label="Order progress">
@@ -457,14 +407,11 @@ export function OrderTracker({
                 </li>
               ))}
             </ol>
-            <p className="ord-progress-message">{messages?.[order.status]}</p>
+            <p className="ord-progress-message">{messages[order.status]}</p>
             <div className="ord-order-meta">
               <span>
-                <Icon
-                  name={order.fulfillment === "pickup" ? "map-pin" : "truck"}
-                  size={17}
-                />
-                {order.fulfillment === "pickup" ? "Café pickup" : "Delivery"}
+                <Icon name="map-pin" size={17} />
+                {order.customerType === "teacher" ? "Teacher" : "Student"}
               </span>
               <span>
                 <Icon name="clock" size={16} />
@@ -476,38 +423,41 @@ export function OrderTracker({
                 })}
               </span>
             </div>
-            {order.address && (
-              <p className="ord-order-address">{order.address}</p>
+            {(order.location || order.classGrade) && (
+              <p className="ord-order-address">
+                {order.location ? `Deliver to: ${order.location}` : `Class: ${order.classGrade}`}
+              </p>
             )}
             <div className="ord-order-summary">
               <h4>Something to look forward to</h4>
-              {order.items.map(({ product, quantity }) => (
-                <div className="ord-total-row" key={product.id}>
+              {order.items.map((item, index) => (
+                <div className="ord-total-row" key={`${item.productId}-${index}`}>
                   <span>
-                    <span className="ord-order-qty">{quantity}×</span>{" "}
-                    {product.name}
+                    <span className="ord-order-qty">{item.quantity}×</span>{" "}
+                    {item.name}
                   </span>
-                  <span>{money(product.price * quantity)}</span>
+                  <span>{money(item.unitPrice * item.quantity)}</span>
                 </div>
               ))}
-              {order.fulfillment === "pickup" && (
-                <div className="ord-total-row">
-                  <span>Delivery</span>
-                  <span>{money(deliveryFee)}</span>
-                </div>
+              {order.discount > 0 && (
+                <>
+                  <div className="ord-total-row">
+                    <span>Original price</span>
+                    <span>{money(order.subtotal)}</span>
+                  </div>
+                  <div className="ord-total-row">
+                    <span>Teacher discount (50%)</span>
+                    <span>−{money(order.discount)}</span>
+                  </div>
+                </>
               )}
               <div className="ord-total-row ord-grand-total">
-                <span>Total</span>
+                <span>{order.discount > 0 ? "Final price" : "Total"}</span>
                 <strong>{money(order.total)}</strong>
               </div>
             </div>
-            {order.notes && (
-              <p className="ord-order-notes">
-                <strong>Your note:</strong> {order.notes}
-              </p>
-            )}
             <p className="ord-fine-print">
-              Status reflects updates made by the café team in this demo.
+              Status reflects updates made by the café team.
             </p>
           </div>
         )}
@@ -523,12 +473,14 @@ export function OrderTracker({
 }
 
 export function ReviewDialog({ onClose }: { onClose: () => void }) {
-  const { addReview } = useCafe();
+  const { user, products, addReview } = useCafe();
   const [rating, setRating] = useState(5);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
   const [hovered, setHovered] = useState(0);
   const [submitted, setSubmitted] = useState(false);
 
-  function submitReview(event: FormEvent<HTMLFormElement>) {
+  async function submitReview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const fields = new FormData(event.currentTarget);
     const comment = String(fields.get("comment") || "").trim();
@@ -542,12 +494,16 @@ export function ReviewDialog({ onClose }: { onClose: () => void }) {
       input.reportValidity();
       return;
     }
-    addReview({
-      name: String(fields.get("name") || "").trim(),
+    setSaving(true);
+    setError("");
+    const result = await addReview({
+      productId: String(fields.get("productId") || ""),
       rating,
       comment,
     });
-    setSubmitted(true);
+    setSaving(false);
+    if (result.ok) setSubmitted(true);
+    else setError(result.error);
   }
 
   return (
@@ -556,7 +512,14 @@ export function ReviewDialog({ onClose }: { onClose: () => void }) {
       onClose={onClose}
       className="ord-review"
     >
-      {submitted ? (
+      {!user ? (
+        <div className="ord-signin-prompt">
+          <h3>Sign in to leave a review</h3>
+          <p>
+            <Link href="/login">Sign in</Link> · <Link href="/register">Create an account</Link>
+          </p>
+        </div>
+      ) : submitted ? (
         <div className="ord-success">
           <span className="ord-success-icon">
             <Icon name="heart" size={29} />
@@ -615,15 +578,13 @@ export function ReviewDialog({ onClose }: { onClose: () => void }) {
               </span>
             </fieldset>
             <label className="ord-field">
-              Your name
-              <input
-                name="name"
-                autoComplete="name"
-                placeholder="What should we call you?"
-                required
-                maxLength={80}
-                pattern=".*\S.*"
-              />
+              Product
+              <select name="productId" required defaultValue="">
+                <option value="" disabled>Choose what you tried</option>
+                {products.map((product) => (
+                  <option key={product.id} value={product.id}>{product.name}</option>
+                ))}
+              </select>
             </label>
             <label className="ord-field">
               Your experience
@@ -638,11 +599,11 @@ export function ReviewDialog({ onClose }: { onClose: () => void }) {
               />
             </label>
             <p className="ord-review-note">
-              Your name and review will appear in our community feed on this
-              device.
+              Your name and review will appear in our community feed.
             </p>
-            <button className="ord-button ord-button-primary" type="submit">
-              Share a little love <Icon name="arrow-right" size={18} />
+            {error && <p className="ord-error" role="alert">{error}</p>}
+            <button className="ord-button ord-button-primary" type="submit" disabled={saving}>
+              {saving ? "Sharing…" : "Share a little love"} <Icon name="arrow-right" size={18} />
             </button>
           </form>
         </>

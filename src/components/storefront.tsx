@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { logout } from "@/app/auth/actions";
 import { Coffee } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
@@ -50,7 +51,7 @@ export function Stars({ rating = 5 }: { rating?: number }) {
 }
 
 export default function Storefront() {
-  const { products, reviews, cart, cartCount, cartTotal, addToCart } =
+  const { user, products, reviews, cart, cartCount, cartTotal, addToCart } =
     useCafe();
   const [category, setCategory] = useState("All favorites");
   const [search, setSearch] = useState("");
@@ -115,6 +116,17 @@ export default function Storefront() {
             <a href="#reviews">Сэтгэгдэл үлдээх</a>
           </nav>
           <div className="header-actions">
+            <div className="user-chip">
+              {user ? (
+                <>
+                  <span className="user-name">{user.name}</span>
+                  {user.role === "admin" && <Link href="/admin">Admin</Link>}
+                  <form action={logout}><button type="submit">Sign out</button></form>
+                </>
+              ) : (
+                <Link href="/login">Sign in</Link>
+              )}
+            </div>
             <button className="track-button" onClick={() => setDialog("track")}>
               <Icon name="receipt" size={17} />
               <span>Захиалга хянах</span>
