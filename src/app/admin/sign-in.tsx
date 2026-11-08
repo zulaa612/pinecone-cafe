@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { Icon } from "@/components/icon";
+import type { FormState } from "@/lib/validation";
 import { signInStaff } from "./actions";
 
-export function StaffSignIn({ demo }: { demo: boolean }) {
-  const [state, action, pending] = useActionState(signInStaff, { error: "" });
+export function StaffSignIn() {
+  const [state, action, pending] = useActionState(signInStaff, {} as FormState);
   return (
     <main className="adm-login">
       <div className="adm-login-story">
@@ -22,12 +23,13 @@ export function StaffSignIn({ demo }: { demo: boolean }) {
           <h2>Welcome behind<br />the counter.</h2>
           <p>Sign in to manage your menu and keep every order moving.</p>
           <form action={action} className="adm-login-form">
-            <label htmlFor="staff-password">Staff access code</label>
-            <input id="staff-password" name="password" type="password" autoComplete="current-password" placeholder="Enter your access code" required maxLength={256} aria-describedby={state.error ? "staff-error" : demo ? "staff-demo" : undefined} aria-invalid={Boolean(state.error)} />
+            <label htmlFor="staff-email">Email</label>
+            <input id="staff-email" name="email" type="email" autoComplete="username" placeholder="you@example.com" required maxLength={254} aria-invalid={Boolean(state.error)} />
+            <label htmlFor="staff-password">Password</label>
+            <input id="staff-password" name="password" type="password" autoComplete="current-password" placeholder="Enter your password" required maxLength={256} aria-describedby={state.error ? "staff-error" : undefined} aria-invalid={Boolean(state.error)} />
             {state.error && <p id="staff-error" className="adm-field-error" role="alert">{state.error}</p>}
             <button className="adm-primary" disabled={pending} type="submit">{pending ? "Signing you in…" : "Enter dashboard"}<Icon name="arrow-right" size={17} /></button>
           </form>
-          {demo && <div className="adm-demo-note" id="staff-demo"><strong>You’re exploring the demo.</strong><p>Use access code <code>pinecone</code>. Menu and order changes are saved in this browser.</p></div>}
           <p className="adm-login-help">Access is for authorized café staff.<br />Need a hand? Contact your café manager.</p>
         </section>
         <span className="adm-login-copyright">© 2026 Pine & Pour</span>

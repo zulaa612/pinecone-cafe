@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { AdminDashboard } from "@/components/admin-dashboard";
+import { getCurrentUser } from "@/lib/auth/dal";
 import { StaffSignIn } from "./sign-in";
-import { isStaffAuthenticated } from "./session";
 
 export const metadata: Metadata = {
   title: "Staff dashboard | Pine & Pour",
@@ -10,8 +11,11 @@ export const metadata: Metadata = {
 };
 
 async function StaffArea() {
-  if (!(await isStaffAuthenticated())) return <StaffSignIn demo={!process.env.ADMIN_PASSWORD} />;
-  return <AdminDashboard demo={!process.env.ADMIN_PASSWORD} />;
+  const user = await getCurrentUser();
+  if (!user) return <StaffSignIn />;
+  // Signed in but not an admin: send them back to the storefront.
+  if (user.role !== "admin") redirect("/");
+  return <AdminDashboard demo />;
 }
 
 export default function AdminPage() {
