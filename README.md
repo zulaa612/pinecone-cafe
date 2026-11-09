@@ -66,9 +66,9 @@ The following redundant files have been deleted:
 
 Products, staff/legacy users, orders and reviews live in SQLite (`data/`, gitignored). The cart is saved in localStorage (`pine-and-pour-cart`); guest order ownership is stored in an HTTP-only cookie. Checkout details stay in form state until the order is submitted. Data from the earlier localStorage prototype is discarded automatically.
 
-## Languages and theme
+## Language and theme
 
-- **Mongolian / English** (default Mongolian). The switcher is in the header of every page. The choice is stored in a `lang` cookie, so the server renders the right language on first paint, and switching never touches the cart or the session.
-- All text lives in `src/locales/` (`common`, `storefront`, `orders`, `admin`, `customer`). Each file declares English and Mongolian side by side with `defineMessages`; a missing Mongolian key is a TypeScript error. Use `t("key")` from `useI18n()` in client components and `getT()` (`src/lib/i18n-server.ts`) in server code. Server errors and validation messages are translated too.
+- **English only.** All pages, server errors and validation messages use English. There is no language switcher, and existing language cookies are ignored.
+- All text lives in `src/locales/` (`common`, `storefront`, `orders`, `admin`, `customer`). Each file declares English messages with `defineMessages`. Use `t("key")` from `useI18n()` in client components and `getT()` (`src/lib/i18n-server.ts`) in server code.
 - Product names/descriptions and customer reviews are user content and are not translated.
 - **Dark / light mode.** The toggle is in the header. The theme is stored in `localStorage` (`pine-theme`) and falls back to the system setting; a tiny inline script in `<head>` applies it before first paint so there is no flash. Every color in the CSS is a `--c-<hex>` variable defined in `src/app/theme.css` (generated), and surfaces that stay dark in both modes are listed in `src/app/theme-keep.css`.

@@ -9,7 +9,7 @@ import { Icon } from "./icon";
 import { CartDrawer, OrderTracker, ReviewDialog } from "./order-dialogs";
 import { money, type Category } from "@/lib/cafe";
 import { useI18n } from "./i18n-provider";
-import { LanguageSwitcher, ThemeToggle } from "./preferences";
+import { ThemeToggle } from "./preferences";
 
 const categories: { name: "All favorites" | Category; icon: string }[] = [
   { name: "All favorites", icon: "grid" },
@@ -115,7 +115,6 @@ export default function Storefront() {
             <Link href="/admin">{t("common.admin")}</Link>
           </nav>
           <div className="header-actions">
-            <LanguageSwitcher />
             <ThemeToggle />
             <button className="track-button" onClick={() => setDialog("track")}>
               <Icon name="receipt" size={17} />
@@ -166,7 +165,6 @@ export default function Storefront() {
               role="group"
               aria-label={t("store.nav.preferences")}
             >
-              <LanguageSwitcher />
               <ThemeToggle />
             </div>
           </nav>

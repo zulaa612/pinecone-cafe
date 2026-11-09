@@ -42,10 +42,9 @@
 
 @media (max-width: 860px) {
   .detail, .detail-reviews-grid { grid-template-columns: minmax(0, 1fr); gap: 28px; }
-  .page-shell .header-actions > .pref-lang, .page-shell .header-actions > .theme-toggle { display: inline-flex; }
+  .page-shell .header-actions > .theme-toggle { display: inline-flex; }
 }
 @media (max-width: 520px) {
   .page-shell .header-actions { gap: 6px; }
-  .page-shell .pref-lang button { padding: 6px 7px; }
 }
 @media (max-width: 520px) { .page-shell .brand-wordmark { display: none; } .page-shell .header-inner { gap: 8px; } }

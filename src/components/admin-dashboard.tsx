@@ -10,7 +10,7 @@ import { money, type ActionResult, type Order, type OrderStatus, type Product } 
 import type { ProductInput } from "@/components/cafe-provider";
 import { signOutStaff } from "@/app/admin/actions";
 import { useI18n } from "@/components/i18n-provider";
-import { LanguageSwitcher, ThemeToggle } from "@/components/preferences";
+import { ThemeToggle } from "@/components/preferences";
 
 const categories: Product["category"][] = ["Coffee", "Non-Coffee", "Meal"];
 const statuses = ["pending", "preparing", "ready", "completed"] as const;
@@ -149,7 +149,6 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
               <span />
               {t("adm.top.open")}
             </span>
-            <LanguageSwitcher />
             <ThemeToggle />
             <span className="adm-avatar">PP</span>
           </div>

@@ -1,28 +1,17 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import { LANG_COOKIE, LOCALES, translate, type Lang, type MessageKey, type TFunction, type Vars } from "@/locales";
+import { createContext, useContext, type ReactNode } from "react";
+import { DEFAULT_LANG, LOCALES, translate, type TFunction } from "@/locales";
 
-type I18nValue = { lang: Lang; locale: string; setLang: (lang: Lang) => void; t: TFunction };
+type I18nValue = { locale: string; t: TFunction };
 const I18nContext = createContext<I18nValue | null>(null);
+const value: I18nValue = {
+  locale: LOCALES[DEFAULT_LANG],
+  t: (key, vars) => translate(DEFAULT_LANG, key, vars),
+};
 
-/**
- * Language lives in a cookie so the server renders the right language on first paint.
- * Switching only updates this state, so the cart and session are untouched.
- */
-export function LanguageProvider({ initialLang, children }: { initialLang: Lang; children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>(initialLang);
-
-  const setLang = useCallback((next: Lang) => {
-    document.cookie = `${LANG_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
-    document.documentElement.lang = next;
-    setLangState(next);
-  }, []);
-
-  const value = useMemo<I18nValue>(
-    () => ({ lang, locale: LOCALES[lang], setLang, t: (key: MessageKey, vars?: Vars) => translate(lang, key, vars) }),
-    [lang, setLang],
-  );
+/** Shares English messages and formatting across client components. */
+export function LanguageProvider({ children }: { children: ReactNode }) {
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
 

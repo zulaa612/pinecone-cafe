@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { Icon } from "@/components/icon";
 import { useI18n } from "@/components/i18n-provider";
-import { LanguageSwitcher, ThemeToggle } from "@/components/preferences";
+import { ThemeToggle } from "@/components/preferences";
 import type { FormState } from "@/lib/validation";
 import { signInStaff } from "./actions";
 
@@ -20,7 +20,6 @@ export function StaffSignIn() {
       </div>
       <div className="adm-login-main">
         <div className="adm-login-prefs">
-          <LanguageSwitcher />
           <ThemeToggle />
         </div>
         <Link href="/" className="adm-back"><Icon name="arrow-left" size={17} /> {t("adm.login.back")}</Link>

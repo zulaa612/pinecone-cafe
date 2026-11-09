@@ -6,7 +6,7 @@ import { useCafe } from "@/components/cafe-provider";
 import { useI18n } from "@/components/i18n-provider";
 import { Icon } from "@/components/icon";
 import { CartDrawer, OrderTracker } from "@/components/order-dialogs";
-import { LanguageSwitcher, ThemeToggle } from "@/components/preferences";
+import { ThemeToggle } from "@/components/preferences";
 import { Brand } from "@/components/storefront";
 
 /** Header, checkout and order tracking for product detail pages. */
@@ -27,7 +27,6 @@ export function PageShell({ children }: { children: ReactNode }) {
             <Link href="/admin">{t("common.admin")}</Link>
           </nav>
           <div className="header-actions">
-            <LanguageSwitcher />
             <ThemeToggle />
             <button className="cart-button" onClick={() => setCartOpen(true)} aria-label={t("cust.cartLabel", { count: cartCount })}>
               <Icon name="bag" size={18} />

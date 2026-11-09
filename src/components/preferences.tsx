@@ -3,7 +3,6 @@
 import { useSyncExternalStore } from "react";
 import { Icon } from "@/components/icon";
 import { useI18n } from "@/components/i18n-provider";
-import { LANGS } from "@/locales";
 
 const THEME_KEY = "pine-theme";
 const THEME_EVENT = "pine-theme-change";
@@ -40,26 +39,5 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
     <button type="button" className={`pref-button theme-toggle ${className}`} onClick={toggle} aria-label={label} title={label} suppressHydrationWarning>
       <span suppressHydrationWarning><Icon name={theme === "dark" ? "sun" : "moon"} size={18} /></span>
     </button>
-  );
-}
-
-export function LanguageSwitcher({ className = "" }: { className?: string }) {
-  const { t, lang, setLang } = useI18n();
-  return (
-    <div className={`pref-lang ${className}`} role="group" aria-label={t("lang.label")}>
-      {LANGS.map(code => (
-        <button
-          key={code}
-          type="button"
-          lang={code}
-          className={code === lang ? "pref-lang-active" : ""}
-          aria-pressed={code === lang}
-          aria-label={t("lang.switchTo", { language: t(`lang.${code}`) })}
-          onClick={() => setLang(code)}
-        >
-          {code.toUpperCase()}
-        </button>
-      ))}
-    </div>
   );
 }
