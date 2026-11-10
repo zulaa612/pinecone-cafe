@@ -5,6 +5,7 @@ import { LanguageProvider } from "@/components/i18n-provider";
 import { readSessionUserId } from "@/lib/auth/session";
 import "./globals.css";
 import "./storefront.css";
+import "./dark-readability.css";
 
 export const metadata: Metadata = {
   title: "Pinecone cafe",

@@ -124,11 +124,6 @@ export default function Storefront() {
       <a className="skip-link" href="#menu">
         {t("store.skip")}
       </a>
-      <div className="announcement">
-        <span className="code">
-          {t("store.announcement.code")} <Coffee />
-        </span>
-      </div>
       <header className="site-header">
         <div className="container header-inner">
           <Brand />

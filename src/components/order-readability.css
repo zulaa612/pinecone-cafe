@@ -1,0 +1,246 @@
+/* Explicit light/dark surfaces keep checkout text, totals and controls legible. */
+.modal-panel:is(.ord-drawer, .ord-tracker, .ord-review) {
+  --ord-bg: #f4f7f4;
+  --ord-surface: #ffffff;
+  --ord-tint: #eaf1ec;
+  --ord-ink: #182e24;
+  --ord-muted: #496052;
+  --ord-line: #7f9586;
+  --ord-accent: #145a40;
+  --ord-accent-hover: #0c422d;
+  --ord-on-accent: #ffffff;
+  --ord-warning: #774205;
+  --ord-warning-bg: #fff3d9;
+  --ord-warning-line: #c38d34;
+  --ord-success: #15532d;
+  --ord-success-bg: #e7f4e9;
+  --ord-danger: #982b25;
+  --ord-danger-bg: #fff0ee;
+  --cream: var(--ord-bg);
+  --line: var(--ord-line);
+  --muted: var(--ord-muted);
+  background: var(--ord-bg);
+  color: var(--ord-ink);
+  font-size: 16px;
+  line-height: 1.6;
+  border: 1px solid var(--ord-line);
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+html[data-theme="dark"] .modal-panel:is(.ord-drawer, .ord-tracker, .ord-review) {
+  --ord-bg: #12231b;
+  --ord-surface: #1c3327;
+  --ord-tint: #294535;
+  --ord-ink: #f0f7f1;
+  --ord-muted: #c0d3c5;
+  --ord-line: #64806c;
+  --ord-accent: #b2edc5;
+  --ord-accent-hover: #d1f7dc;
+  --ord-on-accent: #153b25;
+  --ord-warning: #ffe0a0;
+  --ord-warning-bg: #3c301b;
+  --ord-warning-line: #be9344;
+  --ord-success: #bbf0c9;
+  --ord-success-bg: #203f2b;
+  --ord-danger: #ffc0b9;
+  --ord-danger-bg: #432420;
+}
+
+.modal-panel.ord-drawer { width: min(600px, 100%); border-radius: 0; }
+.modal-overlay:has(.ord-drawer, .ord-tracker, .ord-review) {
+  --ord-backdrop: #0c1c14b8;
+  background: var(--ord-backdrop);
+}
+.modal-panel.ord-tracker { width: min(100%, 680px); max-width: 680px; }
+.modal-panel:is(.ord-drawer, .ord-tracker, .ord-review) .modal-heading {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  padding: 22px 28px;
+  background: var(--ord-surface);
+  border-bottom: 1px solid var(--ord-line);
+}
+.modal-panel:is(.ord-drawer, .ord-tracker, .ord-review) .modal-heading h2 {
+  margin: 0;
+  font-family: inherit;
+  font-size: 27px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.6px;
+  color: var(--ord-ink);
+}
+.modal-panel:is(.ord-drawer, .ord-tracker, .ord-review) .modal-heading .icon-button {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border: 1px solid var(--ord-line);
+  border-radius: 12px;
+  background: var(--ord-tint);
+  color: var(--ord-ink);
+}
+.modal-panel:is(.ord-drawer, .ord-tracker, .ord-review) .modal-content { padding: 24px 28px; }
+
+.ord-checkout-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding: 0 0 24px;
+  margin: 0;
+  list-style: none;
+}
+.ord-checkout-steps li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ord-muted);
+}
+.ord-checkout-steps li > span:first-child {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--ord-line);
+  border-radius: 50%;
+  background: var(--ord-surface);
+}
+.ord-checkout-steps li[aria-current="step"] { color: var(--ord-accent); }
+.ord-checkout-steps li[aria-current="step"] > span:first-child,
+.ord-checkout-steps .ord-checkout-step-done > span:first-child {
+  background: var(--ord-accent);
+  color: var(--ord-on-accent);
+  border-color: var(--ord-accent);
+}
+
+:is(.ord-drawer, .ord-tracker, .ord-review) :is(.ord-cart-intro, .ord-item-details > p, .ord-total-row, .ord-fine-print, .ord-dialog-description, .ord-lookup-help, .ord-order-meta, .ord-order-address, .ord-review-note, .ord-rating legend, .ord-rating > span, .ord-delivery-hint) {
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--ord-muted);
+}
+:is(.ord-drawer, .ord-tracker, .ord-review) :is(.ord-item-details h3, .ord-item-total, .ord-form-heading h3, .ord-order-summary h4, .ord-order-heading h3, .ord-empty h3, .ord-success h3) { color: var(--ord-ink); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-item-details h3 { font-size: 17px; font-weight: 650; }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-item-total { font-size: 16px; }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-text-button { min-height: 44px; font-size: 14px; font-weight: 600; color: var(--ord-accent); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-eyebrow { font-size: 12px; letter-spacing: 1px; color: var(--ord-muted); }
+:is(.ord-drawer, .ord-tracker, .ord-review) :is(.ord-empty p, .ord-success p) { font-size: 16px; color: var(--ord-muted); line-height: 1.65; }
+:is(.ord-drawer, .ord-tracker, .ord-review) :is(.ord-empty h3, .ord-success h3) { font-family: inherit; font-weight: 700; font-size: 29px; }
+:is(.ord-drawer, .ord-tracker, .ord-review) :is(.ord-cart-intro, .ord-cart-item, .ord-order-summary) { border-color: var(--ord-line); }
+
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-button {
+  min-height: 52px;
+  padding: 14px 20px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.4;
+  letter-spacing: 0;
+}
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-button-primary { background: var(--ord-accent); color: var(--ord-on-accent); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-button-primary:hover { background: var(--ord-accent-hover); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-button-secondary { background: var(--ord-surface); color: var(--ord-ink); border-color: var(--ord-line); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-button-secondary:hover { background: var(--ord-tint); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-button:disabled { background: var(--ord-tint); color: var(--ord-muted); border-color: var(--ord-line); transform: none; }
+:is(.ord-drawer, .ord-tracker, .ord-review) :is(button, input, select, textarea):focus-visible { outline: 3px solid var(--ord-accent); outline-offset: 3px; }
+
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-quantity { height: 44px; background: var(--ord-surface); border-color: var(--ord-line); border-radius: 10px; }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-quantity button { width: 44px; height: 42px; color: var(--ord-ink); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-quantity button:hover { background: var(--ord-tint); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-quantity span { font-size: 15px; min-width: 24px; color: var(--ord-ink); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-remove { min-width: 44px; min-height: 44px; padding: 10px; color: var(--ord-danger); }
+
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-field { font-size: 14px; font-weight: 650; color: var(--ord-ink); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-field > span { color: var(--ord-muted); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-field :is(input, select, textarea) {
+  min-height: 52px;
+  font-size: 16px;
+  font-weight: 400;
+  background: var(--ord-surface);
+  color: var(--ord-ink);
+  border-color: var(--ord-line);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-field :is(input, textarea)::placeholder { color: var(--ord-muted); opacity: 1; }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-form-heading h3 { font: 650 20px/1.4 "DM Sans", sans-serif; }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-user-role legend { font-size: 14px; color: var(--ord-ink); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-user-role > label { min-height: 54px; border-color: var(--ord-line); background: var(--ord-surface); color: var(--ord-ink); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-user-role > .ord-selected { border: 2px solid var(--ord-accent); padding: 13px 10px; background: var(--ord-tint); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-user-role input { width: 20px; height: 20px; accent-color: var(--ord-accent); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-user-role span { font-size: 15px; }
+
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-order-summary,
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-confirm-details {
+  padding: 20px;
+  background: var(--ord-surface);
+  border: 1px solid var(--ord-line);
+  border-radius: 14px;
+}
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-order-summary h4 { font: 650 18px/1.4 "DM Sans", sans-serif; margin-bottom: 18px; }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-order-summary .ord-total-row { font-size: 15px; color: var(--ord-ink); gap: 20px; }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-total-row > :last-child { flex-shrink: 0; font-variant-numeric: tabular-nums; }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-order-qty { color: var(--ord-muted); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-confirm-details > div { font-size: 15px; }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-confirm-details dt { color: var(--ord-muted); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-confirm-details dd { color: var(--ord-ink); }
+.ord-drawer .ord-cart-bottom { position: sticky; bottom: -24px; z-index: 2; margin: 24px -28px -24px; padding: 20px 28px max(24px, env(safe-area-inset-bottom)); border-top: 1px solid var(--ord-line); background: var(--ord-surface); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-grand-total { color: var(--ord-ink); border-color: var(--ord-line); font-size: 16px; margin: 0 0 18px; padding-top: 16px; }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-grand-total strong { font-size: 32px; font-weight: 750; letter-spacing: -0.8px; line-height: 1.2; }
+.ord-cart-bottom > .ord-grand-total { border-top: 0; padding-top: 0; }
+
+:is(.ord-drawer, .ord-tracker, .ord-review) :is(.ord-payment, .ord-demo-note, .ord-order-notes, .ord-progress-message) { background: var(--ord-tint); color: var(--ord-ink); border-color: var(--ord-line); border-radius: 12px; font-size: 14px; line-height: 1.65; }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-payment { padding: 18px; }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-payment strong { font-size: 16px; font-weight: 650; }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-payment small { font-size: 14px; color: var(--ord-muted); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-payment-state { padding: 22px; background: var(--ord-warning-bg); color: var(--ord-warning); border: 1px solid var(--ord-warning-line); border-left-width: 5px; border-radius: 14px; }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-payment-state-paid { background: var(--ord-success-bg); color: var(--ord-success); border-color: var(--ord-success); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-payment-state-canceled { background: var(--ord-danger-bg); color: var(--ord-danger); border-color: var(--ord-danger); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-payment-state-heading strong { font-size: 20px; font-weight: 700; line-height: 1.3; }
+:is(.ord-drawer, .ord-tracker, .ord-review) :is(.ord-payment-state-heading p, .ord-payment-notice) { font-size: 14px; line-height: 1.65; }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-payment-notice { color: var(--ord-muted); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-payment-state .ord-payment-notice { color: inherit; }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-error { padding: 14px 16px; border: 1px solid var(--ord-danger); border-radius: 10px; background: var(--ord-danger-bg); color: var(--ord-danger); font-size: 15px; line-height: 1.6; text-align: left; }
+:is(.ord-drawer, .ord-tracker, .ord-review) :is(.ord-unavailable, .ord-free) { font-size: 14px; color: var(--ord-danger); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-success-icon { background: var(--ord-success-bg); color: var(--ord-success); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-payment-pending-icon { background: var(--ord-warning-bg); color: var(--ord-warning); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-empty-icon { background: var(--ord-tint); color: var(--ord-accent); }
+
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-status { font-size: 14px; font-weight: 650; padding: 8px 12px; color: var(--ord-warning); background: var(--ord-warning-bg); }
+:is(.ord-drawer, .ord-tracker, .ord-review) :is(.ord-status-ready, .ord-status-completed) { color: var(--ord-success); background: var(--ord-success-bg); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-order-heading { align-items: flex-start; padding-bottom: 22px; }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-order-heading h3 { font-family: inherit; font-weight: 750; font-size: 26px; }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-progress li { font-size: 13px; color: var(--ord-muted); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-progress-icon { background: var(--ord-surface); border-color: var(--ord-line); color: var(--ord-muted); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-step-active { color: var(--ord-accent) !important; }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-step-active .ord-progress-icon { background: var(--ord-accent); color: var(--ord-on-accent); border-color: var(--ord-accent); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-progress li::after { background: var(--ord-line); }
+:is(.ord-drawer, .ord-tracker, .ord-review) .ord-progress li.ord-step-active::after { background: var(--ord-accent); }
+:is(.ord-drawer, .ord-tracker, .ord-review) :is(.ord-not-found, .ord-tracking-empty, .ord-rating) { background: var(--ord-tint); color: var(--ord-muted); }
+:is(.ord-drawer, .ord-tracker, .ord-review) :is(.ord-not-found h3, .ord-not-found p, .ord-tracking-empty p) { color: var(--ord-ink); font-size: 16px; }
+
+@media (max-width: 520px) {
+  .modal-panel:is(.ord-drawer, .ord-tracker, .ord-review) .modal-heading { padding: 18px 20px; }
+  .modal-panel:is(.ord-drawer, .ord-tracker, .ord-review) .modal-heading h2 { font-size: 24px; }
+  .modal-panel:is(.ord-drawer, .ord-tracker, .ord-review) .modal-content { padding: 20px; }
+  .ord-checkout-steps { gap: 6px; }
+  .ord-checkout-steps li { gap: 6px; font-size: 13px; }
+  :is(.ord-drawer, .ord-tracker, .ord-review) .ord-item-image { width: 60px; height: 72px; }
+  :is(.ord-drawer, .ord-tracker, .ord-review) .ord-cart-item { flex-wrap: wrap; gap: 12px; }
+  :is(.ord-drawer, .ord-tracker, .ord-review) .ord-item-details { flex-basis: calc(100% - 84px); }
+  :is(.ord-drawer, .ord-tracker, .ord-review) .ord-item-total { margin: -6px 0 0 auto; }
+  :is(.ord-drawer, .ord-tracker, .ord-review) .ord-item-actions { gap: 8px; }
+  :is(.ord-drawer, .ord-tracker, .ord-review) .ord-payment-actions { flex-direction: column; }
+  :is(.ord-drawer, .ord-tracker, .ord-review) .ord-payment-actions > .ord-button { width: 100%; }
+  :is(.ord-drawer, .ord-tracker, .ord-review) .ord-payment-state { padding: 18px; }
+  .ord-drawer .ord-cart-bottom { bottom: -20px; margin: 24px -20px -20px; padding: 18px 20px max(20px, env(safe-area-inset-bottom)); }
+  :is(.ord-drawer, .ord-tracker, .ord-review) .ord-grand-total strong { font-size: 29px; }
+  :is(.ord-drawer, .ord-tracker, .ord-review) .ord-progress li { font-size: 12px; }
+  :is(.ord-drawer, .ord-tracker, .ord-review) .ord-lookup > .ord-button { min-height: 52px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-panel:is(.ord-drawer, .ord-tracker, .ord-review),
+  :is(.ord-drawer, .ord-tracker, .ord-review) .ord-button { animation: none; transition: none; }
+}

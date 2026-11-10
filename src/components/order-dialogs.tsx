@@ -118,6 +118,20 @@ export function CartDrawer({
       onClose={onClose}
       className="ord-drawer"
     >
+      {step !== "success" && items.length > 0 && (
+        <ol className="ord-checkout-steps" aria-label={t("ord.steps.label")}>
+          {(["cart", "checkout", "confirm"] as const).map((item, index) => {
+            const activeIndex = ["cart", "checkout", "confirm"].indexOf(step);
+            const done = index < activeIndex;
+            return (
+              <li key={item} aria-current={step === item ? "step" : undefined} className={done ? "ord-checkout-step-done" : undefined}>
+                <span aria-hidden="true">{done ? <Icon name="check" size={16} /> : index + 1}</span>
+                <span>{t(item === "cart" ? "ord.steps.bag" : item === "checkout" ? "ord.steps.details" : "ord.steps.payment")}</span>
+              </li>
+            );
+          })}
+        </ol>
+      )}
       {step === "success" ? (
         <div className="ord-success">
           <span className={`ord-success-icon${placedPaid ? "" : " ord-payment-pending-icon"}`}>

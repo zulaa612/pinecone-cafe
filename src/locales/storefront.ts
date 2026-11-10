@@ -6,7 +6,6 @@ export default defineMessages(
     "store.brand.tagline": "COFFEE & GOOD COMPANY",
     "store.stars.label": "{rating} out of 5 stars",
     "store.skip": "Browse the menu",
-    "store.announcement.code": "Stuck on a bug? Have a coffee.",
     "store.nav.menu": "Menu",
     "store.nav.leaveReview": "Leave a review",
     "store.nav.reviews": "Reviews",
