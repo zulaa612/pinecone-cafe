@@ -107,10 +107,4 @@ export async function getCafeState(
 }
 
 
-/*think*/
 
-const apiKey = process.env.WIRE_API_KEY;
-
-if (!apiKey) {
-  throw new Error("Missing WIRE_API_KEY environment variable");
-}
