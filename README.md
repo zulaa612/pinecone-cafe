@@ -14,6 +14,8 @@ npm run dev
 
 Open http://localhost:3000. For production run `npm run build` then `npm start` (`SESSION_SECRET` is required).
 
+The app and database scripts create the parent directory for local SQLite files automatically. `db:push` also loads `.env.local`, so schema setup uses the same `DATABASE_URL` as the app. The tables and staff account still need the setup commands above; `.env.example` alone is not loaded by Next.js.
+
 ### Environment variables
 
 | Name | Purpose |

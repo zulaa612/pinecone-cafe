@@ -1,10 +1,11 @@
 import "server-only";
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
+import { getDatabaseUrl } from "./config";
 import * as schema from "./schema";
 
 function create() {
-  const client = createClient({ url: process.env.DATABASE_URL ?? "file:./data/cafe.db" });
+  const client = createClient({ url: getDatabaseUrl() });
   return drizzle(client, { schema });
 }
 

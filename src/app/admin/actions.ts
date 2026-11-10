@@ -1,12 +1,16 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { verifyCredentials } from "@/lib/auth/credentials";
 import { createSession, destroySession } from "@/lib/auth/session";
 import { getT, issueMessage } from "@/lib/i18n-server";
 import { loginSchema, translateFieldErrors, type FormState } from "@/lib/validation";
 
 export async function signInStaff(_state: FormState, formData: FormData): Promise<FormState> {
+  // Refresh even when returning form errors: Next 16 otherwise keeps non-hydrated
+  // form submissions in the action phase while rerendering request-time cookies.
+  revalidatePath("/admin");
   const t = await getT();
   const parsed = loginSchema.safeParse({ email: formData.get("email"), password: formData.get("password") });
   if (!parsed.success) {
