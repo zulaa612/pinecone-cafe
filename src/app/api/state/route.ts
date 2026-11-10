@@ -1,7 +1,7 @@
 import { getCurrentUser } from "@/lib/auth/dal";
 import { getCafeState } from "@/lib/data";
 
-/** Orders are scoped to the checkout browser token; authenticated admins can see all orders. */
+/*orders scoped */
 export async function GET() {
   const user = await getCurrentUser();
   const state = await getCafeState(user);

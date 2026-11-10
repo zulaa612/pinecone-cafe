@@ -2,7 +2,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import * as actions from "@/app/actions/cafe";
-import type { ActionResult, AppUser, CafeState, CartItem, CustomerType, Order, OrderStatus, Product, Review } from "@/lib/cafe";
+import * as payments from "@/app/actions/payments";
+import type { ActionResult, AppUser, CafeState, CartItem, CustomerType, Order, OrderStatus, PaymentCheckout, PaymentStatus, Product, Review } from "@/lib/cafe";
 import { toCents } from "@/lib/cafe";
 import { useI18n } from "@/components/i18n-provider";
 import { computePricing } from "@/lib/pricing";
@@ -19,6 +20,8 @@ type CafeContextValue = {
   addToCart: (id: string, quantity?: number) => void;
   setCartQuantity: (id: string, quantity: number) => void;
   placeOrder: (details: { customerName: string; classGrade: string; customerType: CustomerType }) => Promise<ActionResult<{ id: string; totalCents: number }>>;
+  startPayment: (id: string) => Promise<ActionResult<PaymentCheckout>>;
+  checkPayment: (id: string) => Promise<ActionResult<{ paymentStatus: PaymentStatus }>>;
   addReview: (review: { productId: string; rating: number; comment: string }) => Promise<ActionResult>;
   addProduct: (product: ProductInput) => Promise<ActionResult>;
   updateProduct: (id: string, product: ProductInput) => Promise<ActionResult>;
@@ -113,7 +116,7 @@ export function CafeProvider({ sessionKey, children }: { sessionKey: string; chi
   });
 
   /** Runs a server action, then refreshes server data when it succeeded. */
-  async function run<T extends ActionResult<object>>(action: () => Promise<T>): Promise<T> {
+  const run = useCallback(async <T extends ActionResult<object>>(action: () => Promise<T>): Promise<T> => {
     try {
       const result = await action();
       if (result.ok) await refresh();
@@ -121,7 +124,10 @@ export function CafeProvider({ sessionKey, children }: { sessionKey: string; chi
     } catch {
       return { ok: false, error: t("err.network") } as T;
     }
-  }
+  }, [refresh, t]);
+
+  const startPayment = useCallback((id: string) => run(() => payments.startOrderPayment(id)), [run]);
+  const checkPayment = useCallback((id: string) => run(() => payments.checkOrderPayment(id)), [run]);
 
   const value: CafeContextValue = {
     ...state, cart: liveCart, status, refresh, cartCount, cartTotal: pricing.subtotal, pricing, addToCart, setCartQuantity,
@@ -130,6 +136,8 @@ export function CafeProvider({ sessionKey, children }: { sessionKey: string; chi
       if (result.ok) setCart([]);
       return result;
     },
+    startPayment,
+    checkPayment,
     addReview: review => run(() => actions.submitReview(review)),
     addProduct: product => run(() => actions.createProduct(product)),
     updateProduct: (id, product) => run(() => actions.updateProduct(id, product)),

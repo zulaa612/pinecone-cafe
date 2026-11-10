@@ -17,7 +17,7 @@ export type FormState = { error?: string; fieldErrors?: Record<string, string[] 
 export const productSchema = z.object({
   name: z.string().trim().min(2, "err.productName").max(70, "err.productName"),
   description: z.string().trim().min(1, "err.description").max(240, "err.description"),
-  price: z.number({ message: "err.price" }).min(0.01, "err.priceMin").max(9999, "err.price"),
+  price: z.number({ message: "err.price" }).int("err.price").min(1, "err.priceMin").max(1_000_000_000, "err.price"),
   category: z.enum(CATEGORIES, { message: "err.category" }),
   image: z.string().max(2_000_000, "err.imageSize"),
   available: z.boolean(),

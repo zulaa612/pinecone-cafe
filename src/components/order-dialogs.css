@@ -202,6 +202,17 @@
 .ord-button-primary:hover {
   background: var(--c-62442c);
 }
+.ord-button-secondary {
+  border-color: var(--c-dcd2c5);
+  background: var(--c-fffdf9);
+  color: var(--c-4d3b2c);
+}
+.ord-button-secondary:hover {
+  background: var(--c-efe7db);
+}
+.ord-success > .ord-button + .ord-button {
+  margin-top: 10px;
+}
 .ord-button:disabled {
   background: var(--c-ac9f8d);
   color: var(--c-ffffff);
@@ -240,6 +251,10 @@
 .ord-success-icon {
   background: var(--c-e8edde);
   color: var(--c-687c4d);
+}
+.ord-payment-pending-icon {
+  background: var(--c-ede5d6);
+  color: var(--c-8d7046);
 }
 .ord-empty h3,
 .ord-success h3 {
@@ -492,6 +507,58 @@
 .ord-status-completed {
   background: var(--c-e8edde);
   color: var(--c-64734d);
+}
+.ord-payment-state {
+  border: 1px solid var(--c-dfd4c4);
+  border-radius: 9px;
+  background: var(--c-f0eadf);
+  padding: 16px;
+  margin-bottom: 25px;
+  color: var(--c-775f40);
+}
+.ord-payment-state-paid {
+  background: var(--c-e8edde);
+  color: var(--c-64734d);
+}
+.ord-payment-state-canceled {
+  border-color: var(--c-a3412d);
+}
+.ord-payment-state-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.ord-payment-state-heading > svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.ord-payment-state-heading strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+.ord-payment-state-heading p,
+.ord-payment-notice {
+  font-size: 11px;
+  line-height: 1.7;
+  margin: 7px 0 0;
+}
+.ord-payment-notice {
+  color: var(--c-775f40);
+  margin-bottom: 15px;
+}
+.ord-payment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 15px;
+}
+.ord-payment-actions > .ord-button {
+  flex: 1;
+  min-width: 160px;
+}
+.ord-payment-state > .ord-error,
+.ord-payment-state > .ord-payment-notice {
+  margin-bottom: 0;
 }
 .ord-progress {
   padding: 0;

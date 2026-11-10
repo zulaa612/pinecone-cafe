@@ -18,7 +18,9 @@ test("checkout requires name, class and a valid role for both students and teach
   assert.equal(orderSchema.safeParse({ customerName: "Guest Name", classGrade: "Grade 8", items: [item] }).success, false);
   assert.equal(orderSchema.safeParse({ customerName: "Guest Name", classGrade: "Grade 8", customerType: "admin", items: [item] }).success, false);
   assert.deepEqual(computePricing(1001, "teacher"), { subtotalCents: 1001, discountCents: 501, totalCents: 500 });
-  assert.deepEqual(computePricing(1001, "student"), { subtotalCents: 1001, discountCents: 0, totalCents: 1001 });
+  assert.deepEqual(computePricing(1001, "student"), { subtotalCents: 1001, discountCents: 1, totalCents: 1000 });
+  assert.deepEqual(computePricing(100100, "teacher"), { subtotalCents: 100100, discountCents: 50000, totalCents: 50100 });
+  assert.deepEqual(computePricing(0, "student"), { subtotalCents: 0, discountCents: 0, totalCents: 0 });
 });
 
 test("legacy migration preserves rows, supports guests, isolates ownership and remains idempotent", async () => {

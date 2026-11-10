@@ -58,7 +58,7 @@ export function Stars({ rating = 5 }: { rating?: number }) {
 }
 
 export default function Storefront() {
-  const { products, reviews, cart, cartCount, cartTotal, addToCart } =
+  const { products, reviews, cart, cartCount, cartTotal, addToCart, checkPayment } =
     useCafe();
   const { t } = useI18n();
   const [category, setCategory] = useState("All favorites");
@@ -67,6 +67,10 @@ export default function Storefront() {
     null,
   );
   const [orderId, setOrderId] = useState<string>();
+  const [paymentReturn, setPaymentReturn] = useState<"return" | "canceled">();
+  const [paymentReturnError, setPaymentReturnError] = useState("");
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
+  const paymentReturnHandled = useRef(false);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [toast, setToast] = useState("");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -77,6 +81,28 @@ export default function Storefront() {
     },
     [],
   );
+  useEffect(() => {
+    if (paymentReturnHandled.current) return;
+    const url = new URL(window.location.href);
+    const returnedOrderId = url.searchParams.get("payment_order");
+    const result = url.searchParams.get("payment");
+    if (!returnedOrderId || returnedOrderId.length > 60 || (result !== "return" && result !== "canceled")) return;
+    paymentReturnHandled.current = true;
+    url.searchParams.delete("payment_order");
+    url.searchParams.delete("payment");
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+
+    // Restore the saved order after hosted checkout. Only the server can verify payment.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setOrderId(returnedOrderId);
+    setPaymentReturn(result);
+    setDialog("track");
+    setVerifyingPayment(true);
+    void checkPayment(returnedOrderId).then((payment) => {
+      if (!payment.ok) setPaymentReturnError(payment.error);
+      setVerifyingPayment(false);
+    });
+  }, [checkPayment]);
   const filtered = products.filter(
     (p) =>
       (category === "All favorites" || p.category === category) &&
@@ -569,7 +595,14 @@ export default function Storefront() {
         />
       )}
       {dialog === "track" && (
-        <OrderTracker orderId={orderId} onClose={closeDialog} />
+        <OrderTracker
+          key={orderId ?? "lookup"}
+          orderId={orderId}
+          onClose={closeDialog}
+          paymentReturn={paymentReturn}
+          paymentReturnError={paymentReturnError}
+          verifyingPayment={verifyingPayment}
+        />
       )}
       {dialog === "review" && <ReviewDialog onClose={closeDialog} />}
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useCafe } from "@/components/cafe-provider";
 import { Icon } from "@/components/icon";
 import { useI18n } from "@/components/i18n-provider";
@@ -15,7 +15,7 @@ export function CartDrawer({
   onClose: () => void;
   onTrack: (id: string) => void;
 }) {
-  const { cart, products, setCartQuantity, cartCount, placeOrder } =
+  const { cart, products, orders, setCartQuantity, cartCount, placeOrder, startPayment } =
     useCafe();
   const { t } = useI18n();
   const [step, setStep] = useState<"cart" | "checkout" | "confirm" | "success">("cart");
@@ -28,6 +28,7 @@ export function CartDrawer({
   const [placedTotal, setPlacedTotal] = useState<number | null>(null);
   const [placing, setPlacing] = useState(false);
   const [formError, setFormError] = useState("");
+  const placedPaid = orders.find((order) => order.id === placedId)?.paymentStatus === "paid";
   const items = cart.flatMap((item) => {
     const product = products.find(
       (candidate) => candidate.id === item.productId,
@@ -60,7 +61,17 @@ export function CartDrawer({
     setStep("confirm");
   }
 
-  /** Step 3: the only place an order is actually created. The server recomputes all prices. */
+  async function continuePayment(id: string) {
+    setPlacing(true);
+    setFormError("");
+    const payment = await startPayment(id);
+    if (!payment.ok) setFormError(payment.error);
+    else if (payment.checkoutUrl) window.location.assign(payment.checkoutUrl);
+    else if (payment.paymentStatus !== "paid") setFormError(t("err.paymentUnavailable"));
+    setPlacing(false);
+  }
+
+  /** Save the server-priced order before opening hosted payment, so a failure can be retried. */
   async function confirmOrder() {
     if (!items.length || unavailable || placing) return;
     setPlacing(true);
@@ -70,13 +81,14 @@ export function CartDrawer({
       classGrade: details.classGrade,
       customerType: details.customerType,
     });
-    setPlacing(false);
     if (result.ok) {
       setPlacedId(result.id);
       setPlacedTotal(result.totalCents / 100);
       setStep("success");
+      await continuePayment(result.id);
     } else {
       setFormError(result.error);
+      setPlacing(false);
     }
   }
 
@@ -108,11 +120,11 @@ export function CartDrawer({
     >
       {step === "success" ? (
         <div className="ord-success">
-          <span className="ord-success-icon">
-            <Icon name="check" size={30} />
+          <span className={`ord-success-icon${placedPaid ? "" : " ord-payment-pending-icon"}`}>
+            <Icon name={placedPaid ? "check" : "credit-card"} size={30} />
           </span>
           <span className="ord-eyebrow">{t("ord.success.eyebrow")}</span>
-          <h3>{t("ord.success.heading")}</h3>
+          <h3>{t(placedPaid ? "ord.payment.completeHeading" : "ord.success.heading")}</h3>
           <p>
             {t("ord.success.orderPre")} <strong>{placedId}</strong> {t("ord.success.orderPost")}
           </p>
@@ -124,10 +136,20 @@ export function CartDrawer({
           )}
           <div className="ord-demo-note">
             <Icon name="info" size={17} />
-            <span>{t("ord.success.note")}</span>
+            <span>{t(placedPaid ? "ord.payment.paidNote" : "ord.success.note")}</span>
           </div>
+          {formError && <p className="ord-error" role="alert">{formError}</p>}
+          {!placedPaid && (
+            <button
+              className="ord-button ord-button-primary"
+              onClick={() => void continuePayment(placedId)}
+              disabled={placing}
+            >
+              {t(placing ? "ord.payment.opening" : "ord.payment.continue")} <Icon name="arrow-right" size={18} />
+            </button>
+          )}
           <button
-            className="ord-button ord-button-primary"
+            className="ord-button ord-button-secondary"
             onClick={() => onTrack(placedId)}
           >
             {t("ord.success.track")} <Icon name="arrow-right" size={18} />
@@ -381,14 +403,24 @@ const messageKey = {
 export function OrderTracker({
   orderId,
   onClose,
+  paymentReturn,
+  paymentReturnError,
+  verifyingPayment = false,
 }: {
   orderId?: string;
   onClose: () => void;
+  paymentReturn?: "return" | "canceled";
+  paymentReturnError?: string;
+  verifyingPayment?: boolean;
 }) {
-  const { orders } = useCafe();
+  const { orders, status, startPayment, checkPayment } = useCafe();
   const { t, locale } = useI18n();
   const [query, setQuery] = useState(orderId || "");
   const [lookup, setLookup] = useState(orderId || "");
+  const [paymentBusy, setPaymentBusy] = useState<"start" | "check" | null>(null);
+  const [paymentError, setPaymentError] = useState("");
+  const [paymentMessage, setPaymentMessage] = useState("");
+  const [paymentInteracted, setPaymentInteracted] = useState(false);
   const order = orders.find(
     (item) => item.id.toLowerCase() === lookup.trim().toLowerCase(),
   );
@@ -396,9 +428,53 @@ export function OrderTracker({
     (step) => step.status === order?.status,
   );
 
+  // Keep the result current even when Wire settles after the redirect or no webhook is configured.
+  useEffect(() => {
+    if (!order || order.paymentStatus !== "pending" || order.status === "cancelled") return;
+    const id = order.id;
+    let checking = false;
+    const check = async () => {
+      if (checking || document.visibilityState !== "visible") return;
+      checking = true;
+      try { await checkPayment(id); } finally { checking = false; }
+    };
+    const timer = setInterval(() => void check(), 8000);
+    const onFocus = () => void check();
+    window.addEventListener("focus", onFocus);
+    return () => { clearInterval(timer); window.removeEventListener("focus", onFocus); };
+  }, [order?.id, order?.paymentStatus, order?.status, checkPayment]);
+
   function findOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setPaymentError("");
+    setPaymentMessage("");
+    setPaymentInteracted(true);
     setLookup(query.trim());
+  }
+
+  async function payForOrder() {
+    if (!order || paymentBusy || verifyingPayment) return;
+    setPaymentInteracted(true);
+    setPaymentBusy("start");
+    setPaymentError("");
+    setPaymentMessage("");
+    const result = await startPayment(order.id);
+    if (!result.ok) setPaymentError(result.error);
+    else if (result.checkoutUrl) window.location.assign(result.checkoutUrl);
+    else if (result.paymentStatus !== "paid") setPaymentError(t("err.paymentUnavailable"));
+    setPaymentBusy(null);
+  }
+
+  async function verifyPayment() {
+    if (!order || paymentBusy || verifyingPayment) return;
+    setPaymentInteracted(true);
+    setPaymentBusy("check");
+    setPaymentError("");
+    setPaymentMessage("");
+    const result = await checkPayment(order.id);
+    if (!result.ok) setPaymentError(result.error);
+    else setPaymentMessage(t(result.paymentStatus === "paid" ? "ord.payment.paidNote" : "ord.payment.checked"));
+    setPaymentBusy(null);
   }
 
   return (
@@ -430,8 +506,15 @@ export function OrderTracker({
       <p id="ord-lookup-help" className="ord-lookup-help">
         {t("ord.track.help")}
       </p>
+      {paymentReturn && lookup === orderId && (
+        <p className="ord-payment-notice" role="status">
+          {t(verifyingPayment ? "ord.payment.verifying" : paymentReturn === "canceled" ? "ord.payment.canceledReturn" : "ord.payment.returned")}
+        </p>
+      )}
+      {paymentReturnError && !paymentInteracted && lookup === orderId && <p className="ord-error" role="alert">{paymentReturnError}</p>}
       <div aria-live="polite">
-        {lookup && !order && (
+        {lookup && !order && status === "loading" && <p className="ord-payment-notice">{t("common.loading")}</p>}
+        {lookup && !order && status !== "loading" && (
           <div className="ord-not-found">
             <Icon name="search" size={25} />
             <h3>{t("ord.track.notFound")}</h3>
@@ -450,6 +533,40 @@ export function OrderTracker({
               >
                 {t(statusKey[order.status])}
               </span>
+            </div>
+            <div className={`ord-payment-state ord-payment-state-${order.paymentStatus}`}>
+              <div className="ord-payment-state-heading">
+                <Icon name={order.paymentStatus === "paid" ? "check" : "credit-card"} size={20} />
+                <div>
+                  <strong>{t(`payment.${order.paymentStatus}`)}</strong>
+                  <p>{t(order.paymentStatus === "paid" ? "ord.payment.paidNote" : order.paymentStatus === "pay_at_collection" ? "ord.payment.collectionNote" : "ord.payment.pendingNote")}</p>
+                </div>
+              </div>
+              {order.paymentStatus !== "pay_at_collection" && (
+                <div className="ord-payment-actions">
+                  {order.paymentStatus !== "paid" && order.status !== "cancelled" && (
+                    <button
+                      className="ord-button ord-button-primary"
+                      onClick={() => void payForOrder()}
+                      disabled={paymentBusy !== null || verifyingPayment}
+                    >
+                      {t(paymentBusy === "start" ? "ord.payment.opening" : order.paymentStatus === "canceled" ? "ord.payment.retry" : "ord.payment.continue")}
+                      <Icon name="arrow-right" size={16} />
+                    </button>
+                  )}
+                  {order.paymentStatus !== "paid" && (
+                    <button
+                      className="ord-button ord-button-secondary"
+                      onClick={() => void verifyPayment()}
+                      disabled={paymentBusy !== null || verifyingPayment}
+                    >
+                      {t(paymentBusy === "check" || verifyingPayment ? "ord.payment.verifying" : "ord.payment.check")}
+                    </button>
+                  )}
+                </div>
+              )}
+              {paymentError && <p className="ord-error" role="alert">{paymentError}</p>}
+              {paymentMessage && <p className="ord-payment-notice" role="status">{paymentMessage}</p>}
             </div>
             <ol className="ord-progress" aria-label={t("ord.track.progress")}>
               {progress.map((step, index) => (

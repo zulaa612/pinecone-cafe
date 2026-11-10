@@ -1,9 +1,9 @@
 "use server";
 
 import { randomInt } from "node:crypto";
-import { and, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, ne, or } from "drizzle-orm";
 import { db } from "@/db";
-import { orderItems, orders, products, reviews } from "@/db/schema";
+import { orderItems, orderPayments, orders, products, reviews } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth/dal";
 import type { ActionResult } from "@/lib/cafe";
 import { getT, issueMessage } from "@/lib/i18n-server";
@@ -12,6 +12,8 @@ import { computePricing } from "@/lib/pricing";
 import { persistGuestIdentity, prepareGuestIdentity, readGuestTokenHash } from "@/lib/guest";
 import { removeUpload, resolveImage } from "@/lib/uploads";
 import { orderSchema, orderStatusSchema, productSchema, reviewSchema } from "@/lib/validation";
+import { checkoutSettings, paymentService } from "@/lib/payments/server";
+import { wireAmount } from "@/lib/payments/wire-core";
 
 
 /** Re-checks the session and role on every call; never trust that the UI hid a button. */
@@ -64,6 +66,8 @@ export async function placeOrder(input: unknown): Promise<ActionResult<{ id: str
   const parsed = orderSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: issueMessage(await getT(), parsed.error.issues[0]) };
   const { customerName, classGrade, customerType } = parsed.data;
+  try { await checkoutSettings(); }
+  catch { return { ok: false, error: t("err.paymentUnavailable") }; }
 
   // Merge duplicate lines, then price everything from the database.
   const quantities = new Map<string, number>();
@@ -76,6 +80,9 @@ export async function placeOrder(input: unknown): Promise<ActionResult<{ id: str
   const subtotalCents = found.reduce((sum, p) => sum + p.priceCents * (quantities.get(p.id) ?? 0), 0);
   // The selected checkout role controls pricing; submitted totals are never trusted.
   const pricing = computePricing(subtotalCents, customerType);
+  let amountMnt: number;
+  try { amountMnt = wireAmount(pricing.totalCents); }
+  catch { return { ok: false, error: t("err.paymentAmount") }; }
   const guest = await prepareGuestIdentity();
 
   for (let attempt = 0; attempt < 5; attempt++) {
@@ -87,6 +94,7 @@ export async function placeOrder(input: unknown): Promise<ActionResult<{ id: str
           subtotalCents: pricing.subtotalCents, discountCents: pricing.discountCents, totalCents: pricing.totalCents,
         });
         await tx.insert(orderItems).values(found.map(p => ({ orderId: id, productId: p.id, name: p.name, unitPriceCents: p.priceCents, quantity: quantities.get(p.id) ?? 0 })));
+        await tx.insert(orderPayments).values({ orderId: id, amountMnt });
       });
     } catch (error) {
       if (!String(error).includes("UNIQUE")) return { ok: false, error: t("err.orderFailed") };
@@ -100,10 +108,19 @@ export async function placeOrder(input: unknown): Promise<ActionResult<{ id: str
 }
 
 export async function updateOrderStatus(input: unknown): Promise<ActionResult> {
-  if (!(await adminOrError())) return { ok: false, error: (await getT())("err.adminRequired") };
+  const admin = await adminOrError();
+  if (!admin) return { ok: false, error: (await getT())("err.adminRequired") };
   const parsed = orderStatusSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: issueMessage(await getT(), parsed.error.issues[0]) };
   const { id, status } = parsed.data;
+  const payment = await db.query.orderPayments.findFirst({ where: eq(orderPayments.orderId, id) });
+  if (payment && status !== "cancelled" && payment.status !== "paid") {
+    return { ok: false, error: (await getT())("err.paymentRequired") };
+  }
+  if (payment && status === "cancelled") {
+    try { await paymentService().cancel(id, { user: admin, guestHash: null }); }
+    catch { return { ok: false, error: (await getT())("err.paymentFailed") }; }
+  }
   // completedAt drives the 7-day bestseller window, so keep it in sync with the status.
   const result = await db.update(orders).set({ status, completedAt: status === "completed" ? new Date().toISOString() : null }).where(eq(orders.id, id)).returning({ id: orders.id });
   return result.length ? { ok: true } : { ok: false, error: (await getT())("err.orderNotFound") };
@@ -122,7 +139,9 @@ export async function submitReview(input: unknown): Promise<ActionResult> {
   // Identity comes exclusively from a purchased item's checkout, never a review form.
   const [purchase] = await db.select({ customerName: orders.customerName }).from(orders)
     .innerJoin(orderItems, eq(orderItems.orderId, orders.id))
-    .where(and(eq(orders.guestTokenHash, guestTokenHash), eq(orderItems.productId, productId), ne(orders.status, "cancelled")))
+    .leftJoin(orderPayments, eq(orderPayments.orderId, orders.id))
+    .where(and(eq(orders.guestTokenHash, guestTokenHash), eq(orderItems.productId, productId), ne(orders.status, "cancelled"),
+      or(isNull(orderPayments.orderId), eq(orderPayments.status, "paid"))))
     .orderBy(desc(orders.createdAt)).limit(1);
   if (!purchase) return { ok: false, error: (await getT())("err.orderToReview") };
   // The unique browser/product key also makes concurrent submissions update one review.

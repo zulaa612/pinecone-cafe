@@ -22,6 +22,10 @@ const nextStatus: Partial<Record<OrderStatus, OrderStatus>> = {
 
 const ALL = "all";
 
+function canFulfillOrder(order: Pick<Order, "paymentStatus">) {
+  return order.paymentStatus === "paid" || order.paymentStatus === "pay_at_collection";
+}
+
 export function AdminDashboard({ demo }: { demo: boolean }) {
   const {
     products,
@@ -42,7 +46,7 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
     (order) => order.status !== "completed" && order.status !== "cancelled",
   );
   const revenue = orders
-    .filter((order) => order.status === "completed")
+    .filter((order) => order.status === "completed" && canFulfillOrder(order))
     .reduce((sum, order) => sum + order.total, 0);
   const visibleProducts = products.filter(
     (product) =>
@@ -281,7 +285,7 @@ export function AdminDashboard({ demo }: { demo: boolean }) {
                             order={order}
                             onAdvance={async () => {
                               const next = nextStatus[status];
-                              if (next) {
+                              if (next && canFulfillOrder(order)) {
                                 await report(
                                   await updateOrderStatus(order.id, next),
                                   t("adm.notice.orderMoved", {
@@ -576,6 +580,7 @@ function OrderCard({
     timeZone: "Asia/Ulaanbaatar",
   });
   const status = order.status;
+  const canFulfill = canFulfillOrder(order);
   return (
     <article className="adm-order-card">
       <div className="adm-ticket-top">
@@ -588,6 +593,11 @@ function OrderCard({
           {t(order.customerType === "teacher" ? "role.teacher" : "role.student")}
         </span>
       </div>
+      <p className="adm-order-note">
+        <span className={`adm-fulfillment ${order.paymentStatus === "paid" ? "adm-fulfillment-delivery" : ""}`}>
+          {t(`adm.payment.${order.paymentStatus}`)}
+        </span>
+      </p>
       <ul className="adm-ticket-items">
         {order.items.map((item, index) => (
           <li key={`${item.productId}-${index}`}>
@@ -609,13 +619,15 @@ function OrderCard({
       <button
         className="adm-order-advance"
         onClick={onAdvance}
-        disabled={!nextStatus[status]}
+        disabled={!nextStatus[status] || !canFulfill}
       >
-        {nextStatus[status]
-          ? t(`adm.next.${status as "pending" | "preparing" | "ready"}`)
-          : t(`status.${status}`)}
+        {!canFulfill
+          ? t(`adm.payment.${order.paymentStatus}`)
+          : nextStatus[status]
+            ? t(`adm.next.${status as "pending" | "preparing" | "ready"}`)
+            : t(`status.${status}`)}
         <Icon
-          name={!nextStatus[status] ? "check" : "arrow-right"}
+          name={!canFulfill ? "lock" : !nextStatus[status] ? "check" : "arrow-right"}
           size={15}
         />
       </button>
@@ -776,11 +788,11 @@ function ProductEditor({
               id="product-price"
               name="price"
               type="number"
-              min="0.01"
-              max="9999"
-              step="0.01"
+              min="1"
+              max="1000000000"
+              step="1"
               defaultValue={product?.price}
-              placeholder="0.00"
+              placeholder="0"
               required
             />
           </label>
