@@ -3,7 +3,7 @@ import { defineMessages } from "./types";
 export default defineMessages(
   {
     "store.brand.home": "Pinecone cafe — home",
-    "store.brand.tagline": "COFFEE & GOOD COMPANY",
+    "store.brand.tagline": "COFFEE & CODE",
     "store.stars.label": "{rating} out of 5 stars",
     "store.skip": "Browse the menu",
     "store.nav.menu": "Menu",

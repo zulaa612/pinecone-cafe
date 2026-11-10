@@ -504,58 +504,6 @@ export default function Storefront() {
         </section>
       </main>
 
-      <footer className="site-footer">
-        <div className="container">
-          <div className="footer-top">
-            <div>
-              <Brand light />
-              <p>
-                {t("store.footer.blurb1")}
-                <br />
-                {t("store.footer.blurb2")}
-              </p>
-            </div>
-            <div className="footer-links">
-              <strong>
-                <a href="#menu">{t("store.footer.menu")}</a>
-              </strong>
-              <strong>
-                <a href="#reviews">{t("store.footer.reviews")}</a>
-              </strong>
-              <strong>
-                <Link href="/admin">{t("common.admin")}</Link>
-              </strong>
-            </div>
-            <div className="footer-links">
-              <strong>
-                <button onClick={() => setDialog("track")}>
-                  {t("store.footer.track")}
-                </button>
-              </strong>
-
-              <strong>
-                <button onClick={() => setDialog("review")}>
-                  {t("store.footer.leaveReview")}
-                </button>
-              </strong>
-            </div>
-            <div className="footer-last">
-              <Icon name="sun" size={28} />
-              <strong>{t("store.footer.last")}</strong>
-              <p>
-                {t("store.footer.last1")}
-                <br />
-                {t("store.footer.last2")}
-              </p>
-            </div>
-          </div>
-          <div className="footer-bottom">
-            <span>{t("store.footer.copy")}</span>
-            <span>{t("store.footer.motto")}</span>
-            <span>{t("store.footer.languages")}</span>
-          </div>
-        </div>
-      </footer>
       <div className={`toast ${toast ? "toast-visible" : ""}`} role="status">
         <span>
           <Icon name="check" size={17} />

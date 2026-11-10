@@ -224,7 +224,7 @@
   .storefront .footer-links, .storefront .footer-links button, .storefront .footer-links strong { font-size: 11px; }
   .storefront .footer-bottom { align-items: flex-start; flex-direction: column; font-size: 10px; gap: 7px; padding-block: 20px; }
   .storefront .mobile-cart-bar { border-radius: 999px; min-height: 54px; bottom: max(14px, env(safe-area-inset-bottom)); }
-  .storefront:has(.mobile-cart-bar) .site-footer { padding-bottom: 80px; }
+  .storefront:has(.mobile-cart-bar) .reviews-section { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
   .storefront .toast { align-items: flex-start; flex-wrap: wrap; font-size: 11px; border-radius: 12px; }
   .storefront .toast > button { font-size: 10px; min-height: 30px; }
 }
