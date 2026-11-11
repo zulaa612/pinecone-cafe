@@ -2,6 +2,8 @@ import "server-only";
 
 import { desc, eq, or, sql } from "drizzle-orm";
 import { db } from "@/db";
+import { isMongoDatabase } from "@/db/config";
+import { getMongoOrders, getMongoProducts, getMongoReviews } from "@/db/mongo-data";
 import { orders, products, reviews, users } from "@/db/schema";
 import type { SessionUser } from "@/lib/auth/dal";
 import type { CafeState, Order, Product, Review } from "@/lib/cafe";
@@ -10,6 +12,7 @@ import { readGuestTokenHash } from "@/lib/guest";
 const tugrugs = (minorUnits: number) => minorUnits / 100;
 
 export async function getProducts(): Promise<Product[]> {
+  if (isMongoDatabase()) return getMongoProducts();
   const rows = await db
     .select({
       id: products.id,
@@ -36,6 +39,7 @@ export async function getProducts(): Promise<Product[]> {
 }
 
 export async function getReviews(): Promise<Review[]> {
+  if (isMongoDatabase()) return getMongoReviews();
   const rows = await db
     .select({
       id: reviews.id,
@@ -57,6 +61,7 @@ export async function getReviews(): Promise<Review[]> {
 /*Admin can see all orders */
 export async function getOrders(user: SessionUser | null): Promise<Order[]> {
   const guestTokenHash = await readGuestTokenHash();
+  if (isMongoDatabase()) return getMongoOrders(user, guestTokenHash);
   const ownership = or(
     guestTokenHash ? eq(orders.guestTokenHash, guestTokenHash) : undefined,
     user?.role === "customer" ? eq(orders.userId, user.id) : undefined,

@@ -1,11 +1,14 @@
 import "server-only";
 import { db } from "@/db";
+import { isMongoDatabase } from "@/db/config";
 import { headers } from "next/headers";
 import { PaymentService } from "./ledger";
+import { MongoPaymentService } from "./mongo-ledger";
 import { WireClient, WireError } from "./wire-core";
 
 export function paymentService() {
-  return new PaymentService(db, new WireClient(process.env.WIRE_API_KEY?.trim() ?? ""));
+  const wire = new WireClient(process.env.WIRE_API_KEY?.trim() ?? "");
+  return isMongoDatabase() ? new MongoPaymentService(wire) : new PaymentService(db, wire);
 }
 
 export async function checkoutSettings() {

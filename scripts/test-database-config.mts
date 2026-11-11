@@ -3,7 +3,8 @@ import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { join, relative, resolve, sep } from "node:path";
 import test from "node:test";
 import { createClient } from "@libsql/client";
-import { getDatabaseUrl } from "../src/db/config";
+import { getDatabaseUrl, isMongoDatabase } from "../src/db/config";
+import { mongoDatabaseName } from "../src/db/mongodb";
 
 test("a fresh nested SQLite database opens and retains data when reopened", async () => {
   const qaRoot = resolve(".qa");
@@ -53,4 +54,22 @@ test("remote database URLs are returned unchanged", () => {
   for (const url of ["libsql://database.example", "https://database.example"]) {
     assert.equal(getDatabaseUrl(url), url);
   }
+});
+
+test("MongoDB URLs select the Mongo adapter and cannot reach SQLite migration commands", () => {
+  for (const url of ["mongodb://localhost/cafe", "mongodb+srv://cluster.example/cafe"]) {
+    assert.equal(isMongoDatabase(url), true);
+    assert.throws(() => getDatabaseUrl(url), /requires SQLite/);
+  }
+  for (const url of ["file:./data/cafe.db", "libsql://database.example", ""]) {
+    assert.equal(isMongoDatabase(url), false);
+  }
+});
+
+test("Mongo database names support SRV, multi-host replica sets and explicit overrides", () => {
+  assert.equal(mongoDatabaseName("mongodb+srv://cluster.example/cafe", ""), "cafe");
+  assert.equal(mongoDatabaseName("mongodb://host1:27017,host2:27018/replica?replicaSet=rs0", ""), "replica");
+  assert.equal(mongoDatabaseName("mongodb+srv://cluster.example/?appName=cafe", ""), "cafe");
+  assert.equal(mongoDatabaseName("mongodb://localhost/original", "override"), "override");
+  assert.throws(() => mongoDatabaseName("mongodb://localhost/invalid%2Fname", ""), /valid MONGODB_DB_NAME/);
 });

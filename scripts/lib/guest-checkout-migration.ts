@@ -23,8 +23,15 @@ export async function migrateGuestCheckout(client: Client) {
     const reviewColumns = await columns(tx, "reviews");
     if (!orderColumns.size || !reviewColumns.size) throw new Error("Initialize a new database with npm run db:push; this migration requires existing orders and reviews tables.");
     const before = await tx.execute("SELECT (SELECT count(*) FROM users) AS users, (SELECT count(*) FROM orders) AS orders, (SELECT count(*) FROM order_items) AS items, (SELECT count(*) FROM reviews) AS reviews");
+    const paymentTable = await tx.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'order_payments'");
 
     if (orderColumns.get("user_id") === 1 || !orderColumns.has("guest_token_hash")) {
+      // Payments may already exist when migrations run in a different order.
+      // Keep their complete contents outside the orders cascade, retaining the
+      // original payment table's constraints, indexes and foreign key.
+      if (paymentTable.rows.length) {
+        await tx.execute("CREATE TABLE order_payments_guest_migration AS SELECT * FROM order_payments");
+      }
       await tx.execute(`CREATE TABLE orders_guest_migration (
         id TEXT PRIMARY KEY, user_id TEXT REFERENCES users(id), guest_token_hash TEXT,
         customer_name TEXT NOT NULL, customer_type TEXT NOT NULL, class_grade TEXT, location TEXT,
@@ -47,6 +54,16 @@ export async function migrateGuestCheckout(client: Client) {
       await tx.execute("DROP TABLE orders");
       await tx.execute("ALTER TABLE orders_guest_migration RENAME TO orders");
       await tx.execute("ALTER TABLE order_items_guest_migration RENAME TO order_items");
+      if (paymentTable.rows.length) {
+        await tx.execute("INSERT INTO order_payments SELECT * FROM order_payments_guest_migration");
+        const changedPayments = await tx.execute(`
+          SELECT * FROM (SELECT * FROM order_payments EXCEPT SELECT * FROM order_payments_guest_migration)
+          UNION ALL
+          SELECT * FROM (SELECT * FROM order_payments_guest_migration EXCEPT SELECT * FROM order_payments)
+        `);
+        if (changedPayments.rows.length) throw new Error("Payment contents changed; migration rolled back.");
+        await tx.execute("DROP TABLE order_payments_guest_migration");
+      }
     }
 
     if (reviewColumns.get("user_id") === 1 || !reviewColumns.has("guest_token_hash") || !reviewColumns.has("customer_name")) {

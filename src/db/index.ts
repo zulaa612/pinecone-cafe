@@ -11,5 +11,11 @@ function create() {
 
 const globalForDb = globalThis as typeof globalThis & { __cafeDb?: ReturnType<typeof create> };
 
-/** Reused across hot reloads so dev doesn't open a new connection per edit. */
-export const db = (globalForDb.__cafeDb ??= create());
+/** Open SQLite only when used, so importing the legacy adapter also works in MongoDB mode. */
+export const db = new Proxy({} as ReturnType<typeof create>, {
+  get(_target, property) {
+    const database = (globalForDb.__cafeDb ??= create());
+    const value = Reflect.get(database, property);
+    return typeof value === "function" ? value.bind(database) : value;
+  },
+});

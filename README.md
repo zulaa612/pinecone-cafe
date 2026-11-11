@@ -1,13 +1,13 @@
 # Pine & Pour
 
-A responsive café ordering app built with Next.js 16, React 19, Tailwind CSS 4, SQLite (Drizzle ORM) and TypeScript.
+A responsive café ordering app built with Next.js 16, React 19, Tailwind CSS 4, MongoDB or SQLite (Drizzle ORM) and TypeScript.
 
 ## Setup
 
 ```sh
 npm install
 cp .env.example .env.local     # then edit values
-npm run db:push                # create the SQLite tables
+npm run db:push                # create MongoDB indexes or SQLite tables
 npm run db:seed                # create/update the admin account from .env.local
 npm run dev
 ```
@@ -20,9 +20,16 @@ The app and database scripts create the parent directory for local SQLite files 
 
 | Name | Purpose |
 |---|---|
-| `DATABASE_URL` | SQLite file, default `file:./data/cafe.db` |
+| `DATABASE_URL` | MongoDB URI (`mongodb://` or `mongodb+srv://`), or SQLite file (default `file:./data/cafe.db`) |
+| `MONGODB_DB_NAME` | Optional MongoDB database override; otherwise uses the URI database or `cafe` |
 | `SESSION_SECRET` | Signs session cookies (required in production) |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` | Admin account created by `npm run db:seed` |
+
+MongoDB connections use the official Node driver with a shared connection pool. Set `DATABASE_URL`, run `npm run db:check`, `npm run db:push`, and `npm run db:seed`. Use an Atlas cluster or replica set supporting transactions; orders, payment records, webhook deduplication and product deletion require transactions. Keep credentials server-only. `db:check` prints counts and integrity findings without document contents or connection strings. `db:push` creates repeatable indexes, including partial unique indexes that allow null legacy ownership and payment-intent values. SQLite-only `db:migrate:guest` and `db:migrate:payments` reject MongoDB URLs with a clear message.
+
+Changing `DATABASE_URL` selects a backend; it does not copy data between databases. Existing SQLite files stay intact.
+
+To transfer an existing initialized SQLite database into an empty MongoDB database, set the destination `DATABASE_URL`, then run `npm run db:import:sqlite` to inspect source counts and `npm run db:import:sqlite -- --apply` to copy. The source defaults to `file:./data/cafe.db` (`SQLITE_DATABASE_URL` can override it). Import checks SQLite integrity, creates MongoDB indexes, copies all app records in one transaction, verifies counts and records an idempotent migration marker. It refuses to merge into a destination that already contains app data and never modifies the source file. For an SRV DNS failure, Atlas' standard `mongodb://` URI for the same cluster is supported; keep TLS enabled.
 
 ## Guest ordering and staff access
 
@@ -87,7 +94,7 @@ Run `npm run test:currency`, `npm run test:payments`, `npm run test:guest` and `
 
 ## Data
 
-Products, staff/legacy users, orders and reviews live in SQLite (`data/`, gitignored). The cart is saved in localStorage (`pine-and-pour-cart`); guest order ownership is stored in an HTTP-only cookie. Checkout details stay in form state until the order is submitted. Data from the earlier localStorage prototype is discarded automatically.
+Products, staff/legacy users, orders, payments and reviews live in the configured MongoDB database or SQLite (`data/`, gitignored). The cart is saved in localStorage (`pine-and-pour-cart`); guest order ownership is stored in an HTTP-only cookie. Checkout details stay in form state until the order is submitted. Data from the earlier localStorage prototype is discarded automatically. Run `npm run test:mongo` for isolated MongoDB payment adapter checks.
 
 ## Language and theme
 

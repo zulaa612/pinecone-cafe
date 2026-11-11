@@ -7,6 +7,7 @@ import * as schema from "../src/db/schema";
 import { orderSchema } from "../src/lib/validation";
 import { computePricing } from "../src/lib/pricing";
 import { migrateGuestCheckout } from "./lib/guest-checkout-migration";
+import { migrateWirePayments } from "./lib/wire-payments-migration";
 
 test("checkout requires name, class and a valid role for both students and teachers", () => {
   const item = { productId: "coffee", quantity: 1 };
@@ -78,7 +79,7 @@ test("checkout requires name, class and a valid role for both students and teach
   });
 });
 
-test("legacy migration preserves rows, supports guests, isolates ownership and remains idempotent", async () => {
+async function verifyLegacyMigration(paymentsFirst: boolean) {
   const client = createClient({ url: ":memory:" });
   try {
     await client.execute("PRAGMA foreign_keys = ON");
@@ -98,7 +99,28 @@ test("legacy migration preserves rows, supports guests, isolates ownership and r
       "write",
     );
 
+    if (paymentsFirst) {
+      await migrateWirePayments(client);
+      await client.execute("INSERT INTO order_payments (order_id, amount_mnt, currency, status, attempt, provider_intent_id, checkout_session_id, checkout_url, paid_at, created_at) VALUES ('PP-LEGACY', 1001, 'MNT', 'paid', 2, 'pi_legacy', 'cs_legacy', 'https://example.test/checkout', 'paid-date', 'payment-date')");
+      await client.execute("INSERT INTO wire_webhook_events (id, processed_at) VALUES ('evt_legacy', 'processed-date')");
+    }
+    const payments = paymentsFirst ? (await client.execute("SELECT * FROM order_payments")).rows : [];
+    const paymentSchema = paymentsFirst ? (await client.execute("SELECT name, sql FROM sqlite_master WHERE tbl_name = 'order_payments' ORDER BY name")).rows : [];
     const legacy = await client.execute("SELECT * FROM orders");
+    if (paymentsFirst) {
+      // Fail at the final migration marker to verify that the entire rebuild,
+      // including cascaded payments and temporary copies, rolls back together.
+      await client.execute("CREATE TABLE app_migrations (id TEXT PRIMARY KEY, applied_at TEXT NOT NULL DEFAULT 'test-date')");
+      await client.execute("CREATE TRIGGER reject_guest_migration BEFORE INSERT ON app_migrations BEGIN SELECT RAISE(ABORT, 'forced migration failure'); END");
+      await assert.rejects(migrateGuestCheckout(client), /forced migration failure/);
+      assert.deepEqual((await client.execute("SELECT * FROM orders")).rows, legacy.rows);
+      assert.deepEqual((await client.execute("SELECT * FROM order_payments")).rows, payments);
+      assert.deepEqual((await client.execute("SELECT name, sql FROM sqlite_master WHERE tbl_name = 'order_payments' ORDER BY name")).rows, paymentSchema);
+      assert.equal((await client.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE '%_guest_migration'")).rows.length, 0);
+      assert.equal((await client.execute("SELECT * FROM app_migrations")).rows.length, 0);
+      assert.equal((await client.execute("PRAGMA foreign_key_check")).rows.length, 0);
+      await client.execute("DROP TRIGGER reject_guest_migration");
+    }
     assert.equal((await migrateGuestCheckout(client)).changed, true);
     const migrated = await client.execute(
       "SELECT * FROM orders WHERE id = 'PP-LEGACY'",
@@ -129,6 +151,13 @@ test("legacy migration preserves rows, supports guests, isolates ownership and r
       ),
       true,
     );
+    if (paymentsFirst) {
+      assert.deepEqual((await client.execute("SELECT * FROM order_payments")).rows, payments);
+      assert.deepEqual((await client.execute("SELECT name, sql FROM sqlite_master WHERE tbl_name = 'order_payments' ORDER BY name")).rows, paymentSchema);
+      assert.equal((await client.execute("SELECT processed_at FROM wire_webhook_events WHERE id = 'evt_legacy'")).rows[0].processed_at, "processed-date");
+      assert.equal((await client.execute("PRAGMA foreign_key_list(order_payments)")).rows.some(row => row.table === "orders" && row.on_delete === "CASCADE"), true);
+      await assert.rejects(client.execute("INSERT INTO order_payments (order_id, amount_mnt) VALUES ('missing-order', 1001)"), /FOREIGN KEY constraint failed/);
+    }
 
     const db = drizzle(client, { schema });
     await db.insert(schema.orders).values({
@@ -147,6 +176,10 @@ test("legacy migration preserves rows, supports guests, isolates ownership and r
       classGrade: "Grade 9",
       ...computePricing(1001, "student"),
     });
+    if (paymentsFirst) {
+      await assert.rejects(client.execute("INSERT INTO order_payments (order_id, amount_mnt, provider_intent_id) VALUES ('PP GUEST A', 500, 'pi_legacy')"), /UNIQUE constraint failed/);
+      await client.execute("INSERT INTO order_payments (order_id, amount_mnt) VALUES ('PP GUEST A', 500)");
+    }
     await db.insert(schema.orderItems).values({
       orderId: "PP GUEST A",
       productId: "coffee",
@@ -192,12 +225,18 @@ test("legacy migration preserves rows, supports guests, isolates ownership and r
     assert.equal(guestReviews.length, 1);
     assert.equal(guestReviews[0].rating, 5);
     assert.equal((await migrateGuestCheckout(client)).changed, false);
+    if (paymentsFirst) {
+      assert.deepEqual((await client.execute("SELECT * FROM order_payments WHERE order_id = 'PP-LEGACY'")).rows, payments);
+    }
     assert.equal(
       (await client.execute("SELECT count(*) AS count FROM orders")).rows[0]
         .count,
       3,
     );
     await db.delete(schema.orders).where(eq(schema.orders.id, "PP GUEST A"));
+    if (paymentsFirst) {
+      assert.deepEqual((await client.execute("SELECT * FROM order_payments")).rows, payments);
+    }
     assert.equal(
       (
         await db
@@ -222,4 +261,8 @@ test("legacy migration preserves rows, supports guests, isolates ownership and r
   } finally {
     client.close();
   }
-});
+}
+
+for (const paymentsFirst of [false, true]) {
+  test(`legacy migration preserves rows, supports guests, isolates ownership and remains idempotent (${paymentsFirst ? "payments already migrated" : "without payments"})`, () => verifyLegacyMigration(paymentsFirst));
+}
