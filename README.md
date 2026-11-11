@@ -81,10 +81,12 @@ Add these server-only values to `.env.local` and your deployment secrets:
 |---|---|
 | `WIRE_API_KEY` | Wire secret key; never use a `NEXT_PUBLIC_` variable or commit it |
 | `WIRE_QPAY_OPERATOR_ID` | Active QPay operator ID from your Wire project/Connectors; the current account reports `qpay` |
-| `APP_URL` | Canonical public HTTPS origin in production; must be the same origin shoppers use so guest cookies survive the return. Local development can infer a localhost origin from the checkout request |
+| `APP_URL` | Optional on Vercel; required for other production hosts. Explicit public HTTPS origin override; must be the same origin shoppers use so guest cookies survive the return. Local development can infer a localhost origin from the checkout request |
 | `WIRE_WEBHOOK_SECRET` | Optional endpoint signing secret (`whsec_...`), distinct from the API key |
 
 For an existing database run `npm run db:migrate:payments` before starting this version. This additive, repeatable migration creates the payment ledger and webhook deduplication table without changing existing orders or prices. New databases can use `npm run db:push` as usual.
+
+On Vercel, set `WIRE_API_KEY` and `WIRE_QPAY_OPERATOR_ID` in **Project Settings → Environment Variables** for the environments you deploy to, alongside `DATABASE_URL` and `SESSION_SECRET`, then redeploy. Local `.env.local` values are not uploaded to Vercel. With system environment variables enabled (`VERCEL=1`), checkout uses the request's Vercel host over HTTPS when `APP_URL` is absent, so custom domains and preview aliases return to the same browser's guest orders. Without request headers, it falls back to `VERCEL_PROJECT_PRODUCTION_URL` in production or `VERCEL_URL` for the current deployment. Preview deployments never fall back to the production domain. Set `APP_URL` only when you need an explicit override; an invalid override still blocks checkout.
 
 In Wire, activate QPay, enable it on the project and configure its settlement account. This implementation uses [Wire hosted checkout](https://docs.wire.mn/en/docs/guides/hosted-checkout) with `allowed_operators` restricted to the configured QPay ID. Creating an intent and session uses stable, separate idempotency keys per order attempt; retrying a canceled/expired intent creates a new attempt. A hosted checkout URL can be resumed from the order tracker after a network failure. The API key and intent client secret are never returned to the browser.
 

@@ -16,7 +16,7 @@
     "test:db": "node --import tsx scripts/test-database-config.mts",
     "test:mongo": "node --import tsx --test scripts/test-mongo-payments.mts",
     "test:currency": "node --import tsx scripts/test-currency.mts",
-    "test:payments": "node --import tsx --test scripts/test-wire-payments.mts scripts/test-wire-payments-migration.mts",
+    "test:payments": "node --import tsx --test scripts/test-wire-payments.mts scripts/test-wire-payments-migration.mts scripts/test-checkout-settings.mts",
     "db:seed": "node --env-file=.env.local --import tsx scripts/seed.mts"
   },
   "dependencies": {
